@@ -1,0 +1,161 @@
+export const candidates = [
+  {
+    id: 1, name: 'James Holloway', email: 'james.holloway@email.com', phone: '07712 345678',
+    role: 'Senior Site Manager', location: 'Manchester', postcode: 'M1 2AB',
+    status: 'available', rating: 4, source: 'LinkedIn', recruiter: 'Tom Bradley',
+    discipline: 'Civil', experienceYears: 12, salary: 65000, rightToWork: true,
+    notes: 32, lastContacted: '2025-06-05', dateAdded: '2024-01-15',
+    noticePeriod: '4 weeks', travelRadius: 30, availability: '2025-07-07',
+    skills: ['Project Management', 'NVQ Level 6', 'SMSTS', 'CSCS Gold'],
+    certificates: ['SMSTS', 'CSCS Gold Card', 'First Aid at Work', 'IOSH Managing Safely'],
+    tags: ['Senior', 'Civil', 'Manager'],
+    employmentHistory: [
+      { company: 'Costain Ltd', role: 'Site Manager', from: '2020-03', to: '2024-01', current: false },
+      { company: 'Balfour Beatty', role: 'Assistant Site Manager', from: '2016-06', to: '2020-02', current: false },
+    ],
+    references: [
+      { name: 'Peter Larkin', role: 'Site Director, Costain', status: 'obtained' },
+      { name: 'Fiona Walsh', role: 'PM, Balfour Beatty', status: 'pending' },
+    ],
+  },
+  {
+    id: 2, name: 'Sarah Mitchell', email: 'sarah.m@gmail.com', phone: '07891 234567',
+    role: 'Structural Engineer', location: 'London', postcode: 'EC1A 1BB',
+    status: 'placed', rating: 5, source: 'Referral', recruiter: 'Emma Clarke',
+    discipline: 'Structural', experienceYears: 8, salary: 55000, rightToWork: true,
+    notes: 15, lastContacted: '2025-06-07', dateAdded: '2024-03-20',
+    noticePeriod: '1 month', travelRadius: 20, availability: '2025-08-01',
+    skills: ['AutoCAD', 'Revit', 'Tekla', 'IStructE'],
+    certificates: ['IStructE Chartership', 'CSCS Gold Card'],
+    tags: ['Structural', 'London'],
+    employmentHistory: [
+      { company: 'Arup', role: 'Structural Engineer', from: '2019-09', to: 'Present', current: true },
+    ],
+    references: [
+      { name: 'David Chen', role: 'Senior Engineer, Arup', status: 'obtained' },
+    ],
+  },
+  {
+    id: 3, name: 'Ryan Moss', email: 'ryan.moss@hotmail.com', phone: '07654 987321',
+    role: 'Project Manager', location: 'Birmingham', postcode: 'B1 1AA',
+    status: 'interviewing', rating: 4, source: 'Job Board', recruiter: 'Mark Richards',
+    discipline: 'Civil', experienceYears: 10, salary: 70000, rightToWork: true,
+    notes: 8, lastContacted: '2025-06-08', dateAdded: '2024-05-10',
+    noticePeriod: '3 months', travelRadius: 40, availability: '2025-09-01',
+    skills: ['PMP', 'PRINCE2', 'NEC3', 'Risk Management'],
+    certificates: ['PMP', 'PRINCE2 Practitioner', 'SMSTS', 'CSCS Black Card'],
+    tags: ['PM', 'Civil', 'Senior'],
+    employmentHistory: [
+      { company: 'Mace Group', role: 'Project Manager', from: '2021-01', to: 'Present', current: true },
+      { company: 'Kier Group', role: 'Site Manager', from: '2016-04', to: '2020-12', current: false },
+    ],
+    references: [
+      { name: 'Jane Foster', role: 'Director, Mace Group', status: 'obtained' },
+    ],
+  },
+  {
+    id: 4, name: 'Lisa Park', email: 'lisa.park@work.com', phone: '07523 876543',
+    role: 'Groundworks Foreman', location: 'Leeds', postcode: 'LS1 1AA',
+    status: 'available', rating: 3, source: 'Website', recruiter: 'Tom Bradley',
+    discipline: 'Groundworks', experienceYears: 6, salary: 42000, rightToWork: true,
+    notes: 5, lastContacted: '2025-06-01', dateAdded: '2024-07-22',
+    noticePeriod: '2 weeks', travelRadius: 25, availability: '2025-06-23',
+    skills: ['CPCS', 'NPORS', 'Excavation', 'Drainage'],
+    certificates: ['CPCS Appointed Person', 'NPORS', 'CSCS Blue Card', 'First Aid'],
+    tags: ['Groundworks', 'Foreman'],
+    employmentHistory: [
+      { company: 'Galliford Try', role: 'Groundworks Foreman', from: '2022-02', to: 'Present', current: true },
+    ],
+    references: [
+      { name: 'Rob Simms', role: 'Contracts Manager, Galliford Try', status: 'pending' },
+    ],
+  },
+  {
+    id: 5, name: 'Tom Nguyen', email: 't.nguyen@construction.com', phone: '07445 123987',
+    role: 'MEP Engineer', location: 'Glasgow', postcode: 'G1 1AA',
+    status: 'not-available', rating: 4, source: 'LinkedIn', recruiter: 'Priya Sharma',
+    discipline: 'MEP', experienceYears: 7, salary: 52000, rightToWork: true,
+    notes: 12, lastContacted: '2025-05-28', dateAdded: '2024-02-08',
+    noticePeriod: '1 month', travelRadius: 20, availability: '2025-10-01',
+    skills: ['HVAC', 'Electrical', 'BIM', 'CIBSE'],
+    certificates: ['CIBSE Membership', 'CSCS Gold Card', 'ECS Gold Card'],
+    tags: ['MEP', 'Engineer'],
+    employmentHistory: [
+      { company: 'Skanska UK', role: 'MEP Engineer', from: '2020-06', to: 'Present', current: true },
+    ],
+    references: [],
+  },
+  {
+    id: 6, name: 'Emma Davies', email: 'emma.d@gmail.com', phone: '07788 654321',
+    role: 'Quantity Surveyor', location: 'Bristol', postcode: 'BS1 1AA',
+    status: 'available', rating: 5, source: 'Referral', recruiter: 'Emma Clarke',
+    discipline: 'Commercial', experienceYears: 9, salary: 58000, rightToWork: true,
+    notes: 20, lastContacted: '2025-06-06', dateAdded: '2024-04-14',
+    noticePeriod: '1 month', travelRadius: 30, availability: '2025-07-14',
+    skills: ['RICS', 'NEC', 'JCT', 'Cost Planning'],
+    certificates: ['MRICS', 'CSCS Gold Card'],
+    tags: ['QS', 'Commercial'],
+    employmentHistory: [
+      { company: 'Kier Group', role: 'Senior QS', from: '2019-02', to: 'Present', current: true },
+    ],
+    references: [
+      { name: 'Alan Price', role: 'Commercial Director, Kier', status: 'obtained' },
+    ],
+  },
+  {
+    id: 7, name: 'Marcus Webb', email: 'marcus.webb@email.co.uk', phone: '07312 456789',
+    role: 'Health & Safety Manager', location: 'Sheffield', postcode: 'S1 2PP',
+    status: 'interviewing', rating: 3, source: 'Job Board', recruiter: 'Mark Richards',
+    discipline: 'H&S', experienceYears: 14, salary: 60000, rightToWork: true,
+    notes: 3, lastContacted: '2025-06-07', dateAdded: '2024-06-01',
+    noticePeriod: '3 months', travelRadius: 50, availability: '2025-09-15',
+    skills: ['NEBOSH', 'IOSH', 'CDM 2015', 'Risk Assessment'],
+    certificates: ['NEBOSH Diploma', 'IOSH Managing Safely', 'CSCS Gold Card', 'First Aid'],
+    tags: ['H&S', 'Senior'],
+    employmentHistory: [
+      { company: 'Balfour Beatty', role: 'H&S Manager', from: '2018-05', to: 'Present', current: true },
+    ],
+    references: [
+      { name: 'Carol Hughes', role: 'H&S Director, Balfour Beatty', status: 'obtained' },
+    ],
+  },
+]
+
+export const clients = [
+  { id: 1, name: 'Balfour Beatty', sector: 'Construction', website: 'balfourbeatty.com', location: 'London', status: 'active', contacts: 4, vacancies: 8, placements: 22, accountManager: 'Tom Bradley', dateAdded: '2023-05-12', revenue: '£184k' },
+  { id: 2, name: 'Mace Group', sector: 'Construction', website: 'macegroup.com', location: 'London', status: 'active', contacts: 3, vacancies: 5, placements: 15, accountManager: 'Emma Clarke', dateAdded: '2023-08-20', revenue: '£105k' },
+  { id: 3, name: 'Costain Ltd', sector: 'Infrastructure', website: 'costain.com', location: 'Maidenhead', status: 'active', contacts: 2, vacancies: 3, placements: 10, accountManager: 'Mark Richards', dateAdded: '2023-11-01', revenue: '£70k' },
+  { id: 4, name: 'Skanska UK', sector: 'Construction', website: 'skanska.co.uk', location: 'London', status: 'active', contacts: 5, vacancies: 12, placements: 31, accountManager: 'Tom Bradley', dateAdded: '2022-12-15', revenue: '£217k' },
+  { id: 5, name: 'Arup', sector: 'Engineering', website: 'arup.com', location: 'London', status: 'active', contacts: 6, vacancies: 7, placements: 18, accountManager: 'Priya Sharma', dateAdded: '2023-03-08', revenue: '£126k' },
+  { id: 6, name: 'Kier Group', sector: 'Construction', website: 'kier.co.uk', location: 'Coventry', status: 'prospect', contacts: 1, vacancies: 0, placements: 0, accountManager: 'Emma Clarke', dateAdded: '2025-04-22', revenue: '£0' },
+]
+
+export const vacancies = [
+  { id: 1, title: 'Senior Site Manager', client: 'Balfour Beatty', project: 'Manchester Victoria Gateway', location: 'Manchester', postcode: 'M1', salary: '£60k-£70k', status: 'active', type: 'Permanent', discipline: 'Civil', recruiter: 'Tom Bradley', dateAdded: '2025-05-20', applications: 14, shortlisted: 4, interviews: 2, deadline: '2025-07-01', priority: 'High', visibility: 'Public', requiredCerts: ['SMSTS', 'CSCS', 'First Aid'], description: 'Leading construction of a major infrastructure project in Manchester city centre. The successful candidate will manage the on-site team, ensure programme delivery, and liaise directly with the client.' },
+  { id: 2, title: 'Structural Engineer', client: 'Arup', project: 'London Bridge Residential', location: 'London', postcode: 'EC2', salary: '£50k-£60k', status: 'active', type: 'Permanent', discipline: 'Structural', recruiter: 'Emma Clarke', dateAdded: '2025-05-28', applications: 22, shortlisted: 6, interviews: 3, deadline: '2025-06-30', priority: 'Medium', visibility: 'Public', requiredCerts: ['IStructE', 'CSCS'], description: 'Structural design for high-rise residential development in London Bridge.' },
+  { id: 3, title: 'Project Manager', client: 'Mace Group', project: 'London Bridge Residential', location: 'London', postcode: 'WC2', salary: '£70k-£85k', status: 'active', type: 'Permanent', discipline: 'Civil', recruiter: 'Mark Richards', dateAdded: '2025-06-01', applications: 18, shortlisted: 5, interviews: 2, deadline: '2025-07-15', priority: 'High', visibility: 'Public', requiredCerts: ['PMP', 'SMSTS', 'CSCS Black Card'], description: 'Major commercial development project management role.' },
+  { id: 4, title: 'Groundworks Foreman', client: 'Costain Ltd', project: 'Birmingham Metro Extension', location: 'Birmingham', postcode: 'B5', salary: '£38k-£45k', status: 'active', type: 'Contract', discipline: 'Groundworks', recruiter: 'Tom Bradley', dateAdded: '2025-06-03', applications: 9, shortlisted: 3, interviews: 1, deadline: '2025-06-25', priority: 'High', visibility: 'Public', requiredCerts: ['CPCS', 'CSCS', 'First Aid'], description: 'Overseeing groundworks teams on civil engineering scheme in Birmingham.' },
+  { id: 5, title: 'MEP Coordinator', client: 'Skanska UK', project: 'Glasgow City Centre Regen', location: 'Glasgow', postcode: 'G2', salary: '£45k-£55k', status: 'on-hold', type: 'Permanent', discipline: 'MEP', recruiter: 'Priya Sharma', dateAdded: '2025-05-10', applications: 7, shortlisted: 2, interviews: 0, deadline: '2025-07-01', priority: 'Low', visibility: 'Private', requiredCerts: ['ECS Gold', 'CSCS'], description: 'Coordination of mechanical and electrical services for major regeneration project.' },
+  { id: 6, title: 'Quantity Surveyor', client: 'Kier Group', project: '', location: 'Coventry', postcode: 'CV1', salary: '£50k-£58k', status: 'filled', type: 'Permanent', discipline: 'Commercial', recruiter: 'Emma Clarke', dateAdded: '2025-04-15', applications: 25, shortlisted: 8, interviews: 4, deadline: '2025-05-30', priority: 'Medium', visibility: 'Public', requiredCerts: ['MRICS', 'CSCS'], description: 'Commercial management for a new build housing scheme in Coventry.' },
+]
+
+export const pipelineStages = [
+  { key: 'New Application', color: '#6b7280', badge: 'badge-gray' },
+  { key: 'Screening',       color: '#3b82f6', badge: 'badge-blue' },
+  { key: 'Shortlisted',     color: '#8b5cf6', badge: 'badge-purple' },
+  { key: 'Contacted',       color: '#f59e0b', badge: 'badge-yellow' },
+  { key: 'CV Sent',         color: '#f97316', badge: 'badge-gold' },
+  { key: 'Interview Arranged', color: '#ec4899', badge: 'badge-purple' },
+  { key: 'Interview Completed', color: '#14b8a6', badge: 'badge-blue' },
+  { key: 'Offer',           color: '#b8942e', badge: 'badge-gold' },
+  { key: 'Placed',          color: '#16a34a', badge: 'badge-green' },
+  { key: 'Rejected',        color: '#dc2626', badge: 'badge-red' },
+  { key: 'Withdrawn',       color: '#9ca3af', badge: 'badge-gray' },
+]
+
+export const projects = [
+  { id: 1, name: 'Manchester Victoria Gateway', client: 'Balfour Beatty', value: '£45M', sector: 'Infrastructure', location: 'Manchester', postcode: 'M1 1AA', status: 'active', stage: 'Construction', startDate: '2024-03-01', endDate: '2026-06-30', opportunityScore: 88, contacts: 3, rolesNeeded: 6, projectType: 'Civil / Infrastructure', priority: 'High', notes: 'Client may need additional site managers as programme accelerates in Q3.' },
+  { id: 2, name: 'London Bridge Residential', client: 'Mace Group', value: '£120M', sector: 'Residential', location: 'London', postcode: 'SE1 9RT', status: 'active', stage: 'Design', startDate: '2025-01-15', endDate: '2027-12-31', opportunityScore: 75, contacts: 4, rolesNeeded: 12, projectType: 'Residential', priority: 'High', notes: 'Multiple roles across structural, MEP and commercial disciplines expected.' },
+  { id: 3, name: 'Birmingham Metro Extension', client: 'Costain Ltd', value: '£200M', sector: 'Transport', location: 'Birmingham', postcode: 'B1 1BB', status: 'tender', stage: 'Procurement', startDate: '2026-01-01', endDate: '2029-03-31', opportunityScore: 62, contacts: 2, rolesNeeded: 20, projectType: 'Civil / Transport', priority: 'Medium', notes: 'Tender result expected Q4 2025. Pre-qualify candidates early.' },
+  { id: 4, name: 'Glasgow City Centre Regen', client: 'Skanska UK', value: '£85M', sector: 'Commercial', location: 'Glasgow', postcode: 'G1 1AA', status: 'active', stage: 'Construction', startDate: '2024-09-01', endDate: '2026-12-31', opportunityScore: 91, contacts: 5, rolesNeeded: 8, projectType: 'Commercial', priority: 'High', notes: 'Fast-track programme. Urgent roles: Site Manager x2, QS x1.' },
+]
