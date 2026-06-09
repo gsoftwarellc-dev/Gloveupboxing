@@ -50,13 +50,6 @@ export default function Candidates() {
     })
   }
 
-  function markQualified(id: number) {
-    setCandidates(prev => prev.map(c => c.id === id ? { ...c, status: 'qualified' } : c))
-  }
-
-  function unqualify(id: number) {
-    setCandidates(prev => prev.map(c => c.id === id ? { ...c, status: 'reserve' } : c))
-  }
 
   function confirmAssign() {
     if (!assignModal) return

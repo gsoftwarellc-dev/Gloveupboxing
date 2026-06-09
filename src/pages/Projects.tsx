@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, MapPin, Calendar, Users, TrendingUp, ChevronRight } from 'lucide-react'
+import { Plus, Search, MapPin, Calendar, Users, ChevronRight } from 'lucide-react'
 import { projects } from '../data/mock'
 
 const statusConfig: Record<string, { label: string; cls: string }> = {

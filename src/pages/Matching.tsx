@@ -37,17 +37,13 @@ const projectPositions: Record<number, { role: string; discipline: string; qty: 
 
 // ── Match engine ──────────────────────────────────────────────────────────────
 
-function computeMatch(c: typeof candidates[0], projectId: number, selectedPosition?: string) {
+function computeMatch(c: typeof candidates[0], projectId: number) {
   const positions = projectPositions[projectId] ?? []
   const disciplines = [...new Set(positions.map(p => p.discipline))]
-  const roles = positions.map(p => p.role.toLowerCase())
   const reasons: { text: string; pass: boolean; icon: any }[] = []
   let score = 0
 
   const disciplineMatch = disciplines.includes(c.discipline)
-  const roleMatch = selectedPosition
-    ? c.role.toLowerCase().includes(selectedPosition.toLowerCase()) || selectedPosition.toLowerCase().includes(c.discipline.toLowerCase())
-    : disciplineMatch
   reasons.push({
     text: disciplineMatch ? `Discipline: ${c.discipline}` : `Discipline: ${c.discipline} — not needed`,
     pass: disciplineMatch, icon: Briefcase
@@ -105,7 +101,7 @@ export default function Matching() {
 
   const matchedCandidates = selectedProject
     ? candidates
-        .map(c => ({ ...c, ...computeMatch(c, selectedProject.id, selectedPosition) }))
+        .map(c => ({ ...c, ...computeMatch(c, selectedProject.id) }))
         .sort((a, b) => b.score - a.score)
     : []
 

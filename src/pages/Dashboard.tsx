@@ -2,7 +2,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts'
-import { Users, Building2, Briefcase, Zap, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Users, Building2, Briefcase, Zap, TrendingUp, Clock, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const placementsData = [
@@ -30,20 +30,6 @@ const sectorData = [
   { name: 'Other', value: 10, color: '#94a3b8' },
 ]
 
-const recentActivity = [
-  { id: 1, type: 'placement', text: 'James Holloway placed at Costain Ltd', time: '2h ago', icon: CheckCircle, color: '#34d399' },
-  { id: 2, type: 'vacancy', text: 'New vacancy: Site Manager – Manchester', time: '3h ago', icon: Briefcase, color: '#60a5fa' },
-  { id: 3, type: 'candidate', text: 'Sarah Mitchell added as new candidate', time: '4h ago', icon: Users, color: '#b8942e' },
-  { id: 4, type: 'email', text: 'Bulk email sent to 45 civil engineers', time: '5h ago', icon: AlertCircle, color: '#c084fc' },
-  { id: 5, type: 'client', text: 'Balfour Beatty – new contact added', time: '6h ago', icon: Building2, color: '#fbbf24' },
-]
-
-const topRecruiters = [
-  { name: 'Tom Bradley', placements: 12, target: 15, revenue: '£84k' },
-  { name: 'Emma Clarke', placements: 9, target: 15, revenue: '£63k' },
-  { name: 'Mark Richards', placements: 7, target: 10, revenue: '£49k' },
-  { name: 'Priya Sharma', placements: 6, target: 10, revenue: '£42k' },
-]
 
 const upcomingInterviews = [
   { candidate: 'John Davies', role: 'Senior Site Manager', client: 'Mace Group', date: 'Today 2:00pm', status: 'confirmed' },

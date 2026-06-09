@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Mail, Send, Users, Eye, Plus, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Send, Users, Eye, Plus, AlertTriangle, CheckCircle } from 'lucide-react'
 
 const campaigns = [
   { id: 1, name: 'Site Managers – Manchester Opportunities', recipients: 45, sent: 45, opened: 32, clicked: 12, status: 'sent', date: '2025-06-06' },

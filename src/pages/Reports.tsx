@@ -5,7 +5,7 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts'
 import {
-  Download, Users, Phone, FileText, CalendarCheck, Trophy, TrendingUp
+  Download, Users, FileText, CalendarCheck, Trophy
 } from 'lucide-react'
 
 // ── Mock Data ──────────────────────────────────────────────────────────────
@@ -38,12 +38,6 @@ const activityData = [
   { name: 'Submissions', value: 44, color: '#f97316' },
 ]
 
-const recruiters = [
-  { name: 'Tom Bradley', candidatesAdded: 34, callsLogged: 61, cvsSent: 28, interviews: 12, placements: 12, hitRate: 35.3 },
-  { name: 'Emma Clarke', candidatesAdded: 27, callsLogged: 49, cvsSent: 22, interviews: 9, placements: 9, hitRate: 33.3 },
-  { name: 'Mark Richards', candidatesAdded: 21, callsLogged: 38, cvsSent: 17, interviews: 7, placements: 7, hitRate: 33.3 },
-  { name: 'Priya Sharma', candidatesAdded: 18, callsLogged: 32, cvsSent: 14, interviews: 6, placements: 6, hitRate: 33.3 },
-]
 
 const vacancyPerf = [
   { vacancy: 'Senior Site Manager', client: 'Balfour Beatty', applications: 18, shortlisted: 7, cvsSent: 5, interviews: 3, status: 'active' },

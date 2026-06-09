@@ -96,7 +96,6 @@ export default function AdminSettings() {
   const [newCertCategory, setNewCertCategory] = useState('Site Management')
   const [newCertDesc, setNewCertDesc] = useState('')
 
-  const activeLabel = settingsSections.find(s => s.key === activeSection)?.label ?? ''
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

@@ -172,31 +172,6 @@ const projectActivity: Record<number, { icon: any; text: string; time: string }[
   ],
 }
 
-const linkedVacancies: Record<number, { id: number; title: string; status: string; type: string }[]> = {
-  1: [
-    { id: 1, title: 'Senior Site Manager', status: 'active', type: 'Permanent' },
-    { id: 3, title: 'Groundworks Foreman', status: 'active', type: 'Contract' },
-  ],
-  2: [
-    { id: 2, title: 'Structural Engineer', status: 'active', type: 'Permanent' },
-    { id: 5, title: 'MEP Coordinator', status: 'active', type: 'Contract' },
-  ],
-  3: [
-    { id: 3, title: 'Groundworks Foreman', status: 'active', type: 'Contract' },
-    { id: 6, title: 'Quantity Surveyor', status: 'on-hold', type: 'Permanent' },
-  ],
-  4: [
-    { id: 3, title: 'Project Manager', status: 'active', type: 'Permanent' },
-    { id: 4, title: 'Site Administrator', status: 'filled', type: 'Contract' },
-  ],
-}
-
-const linkedCompanies: Record<number, { name: string; sector: string }[]> = {
-  1: [{ name: 'Balfour Beatty', sector: 'Infrastructure' }, { name: 'Amey Engineering', sector: 'Civil' }],
-  2: [{ name: 'Mace Group', sector: 'Construction' }, { name: 'Arup', sector: 'Engineering' }],
-  3: [{ name: 'Costain Ltd', sector: 'Transport' }, { name: 'TfWM', sector: 'Public Sector' }],
-  4: [{ name: 'Skanska UK', sector: 'Commercial' }, { name: 'Glasgow City Council', sector: 'Public Sector' }],
-}
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
