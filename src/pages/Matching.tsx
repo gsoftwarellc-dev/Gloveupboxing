@@ -1,238 +1,486 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Zap, Search, Star, MapPin, CheckCircle, XCircle, Brain, Award, Clock, Banknote } from 'lucide-react'
-import { candidates, vacancies } from '../data/mock'
+import {
+  Zap, Search, Star, MapPin, CheckCircle, XCircle,
+  Award, Clock, Banknote, Briefcase, ChevronDown, ChevronUp,
+  Users, Building2, Calendar, ArrowLeft, Filter
+} from 'lucide-react'
+import { candidates, projects } from '../data/mock'
 
-function MatchBar({ score }: { score: number }) {
-  const color = score >= 80 ? '#34d399' : score >= 65 ? '#fbbf24' : '#f87171'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-      <div style={{ flex: 1, height: 6, background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${score}%`, background: color, borderRadius: '9999px', transition: 'width 0.5s ease' }} />
-      </div>
-      <span style={{ fontSize: '1.05rem', fontWeight: 700, color, minWidth: '2.5rem', textAlign: 'right' }}>{score}%</span>
-    </div>
-  )
+// ── Project positions needed ──────────────────────────────────────────────────
+
+const projectPositions: Record<number, { role: string; discipline: string; qty: number }[]> = {
+  1: [
+    { role: 'Senior Site Manager',  discipline: 'Civil',      qty: 2 },
+    { role: 'Site Engineer',        discipline: 'Civil',      qty: 2 },
+    { role: 'Groundworks Foreman',  discipline: 'Groundworks', qty: 2 },
+  ],
+  2: [
+    { role: 'Structural Engineer',  discipline: 'Structural', qty: 3 },
+    { role: 'MEP Coordinator',      discipline: 'MEP',        qty: 2 },
+    { role: 'Senior QS',            discipline: 'Commercial', qty: 2 },
+    { role: 'Project Manager',      discipline: 'Civil',      qty: 2 },
+    { role: 'Site Manager',         discipline: 'Civil',      qty: 3 },
+  ],
+  3: [
+    { role: 'Civils Site Manager',  discipline: 'Civil',      qty: 4 },
+    { role: 'Groundworks Foreman',  discipline: 'Groundworks', qty: 4 },
+    { role: 'Site Engineer',        discipline: 'Civil',      qty: 4 },
+    { role: 'QS',                   discipline: 'Commercial', qty: 3 },
+  ],
+  4: [
+    { role: 'Site Manager',         discipline: 'Civil',      qty: 2 },
+    { role: 'Quantity Surveyor',    discipline: 'Commercial', qty: 1 },
+    { role: 'Structural Engineer',  discipline: 'Structural', qty: 2 },
+  ],
 }
 
-function computeMatch(c: typeof candidates[0], v: typeof vacancies[0]) {
-  const reasons: { text: string; pass: boolean; icon: typeof CheckCircle }[] = []
+// ── Match engine ──────────────────────────────────────────────────────────────
+
+function computeMatch(c: typeof candidates[0], projectId: number, selectedPosition?: string) {
+  const positions = projectPositions[projectId] ?? []
+  const disciplines = [...new Set(positions.map(p => p.discipline))]
+  const roles = positions.map(p => p.role.toLowerCase())
+  const reasons: { text: string; pass: boolean; icon: any }[] = []
   let score = 0
 
-  // Discipline / role match
-  const disciplineMatch = c.discipline === v.discipline
-  reasons.push({ text: disciplineMatch ? `Discipline match: ${c.discipline}` : `Discipline mismatch: ${c.discipline} vs ${v.discipline}`, pass: disciplineMatch, icon: Zap })
-  if (disciplineMatch) score += 30
-
-  // Salary match — parse vacancy salary range
-  const salaryMatch = (() => {
-    const m = v.salary.match(/£(\d+)k[^£]*£(\d+)k/)
-    if (!m) return true
-    const [min, max] = [parseInt(m[1]) * 1000, parseInt(m[2]) * 1000]
-    return c.salary >= min * 0.9 && c.salary <= max * 1.15
-  })()
-  reasons.push({ text: salaryMatch ? `Salary aligned: £${(c.salary / 1000).toFixed(0)}k within ${v.salary}` : `Salary mismatch: £${(c.salary / 1000).toFixed(0)}k vs ${v.salary}`, pass: salaryMatch, icon: Banknote })
-  if (salaryMatch) score += 20
-
-  // Location / radius
-  const sameCity = c.location === v.location
-  const nearbyCity = ['Manchester', 'Birmingham', 'London', 'Glasgow', 'Leeds'].includes(c.location) &&
-    ['Manchester', 'Birmingham', 'London', 'Glasgow', 'Leeds'].includes(v.location) &&
-    c.travelRadius >= 30
-  const locationMatch = sameCity || (nearbyCity && c.travelRadius >= 20)
+  const disciplineMatch = disciplines.includes(c.discipline)
+  const roleMatch = selectedPosition
+    ? c.role.toLowerCase().includes(selectedPosition.toLowerCase()) || selectedPosition.toLowerCase().includes(c.discipline.toLowerCase())
+    : disciplineMatch
   reasons.push({
-    text: sameCity ? `Location match: both in ${c.location}` : locationMatch ? `Within travel radius: ${c.location} → ${v.location} (${c.travelRadius}mi radius)` : `Location gap: ${c.location} → ${v.location}, ${c.travelRadius}mi radius`,
-    pass: locationMatch, icon: MapPin
+    text: disciplineMatch ? `Discipline: ${c.discipline}` : `Discipline: ${c.discipline} — not needed`,
+    pass: disciplineMatch, icon: Briefcase
   })
-  if (locationMatch) score += 20
+  if (disciplineMatch) score += 35
 
-  // Certificate matching
-  const requiredCerts = v.requiredCerts || []
-  const matchedCerts = requiredCerts.filter(rc =>
-    c.certificates.some(cc => cc.toLowerCase().includes(rc.toLowerCase()) || rc.toLowerCase().includes(cc.toLowerCase()))
-  )
-  const certsPass = requiredCerts.length === 0 || matchedCerts.length >= Math.ceil(requiredCerts.length * 0.5)
-  reasons.push({
-    text: requiredCerts.length === 0 ? 'No certificate requirements' :
-      certsPass ? `Certificates: ${matchedCerts.length}/${requiredCerts.length} matched (${matchedCerts.join(', ')})` :
-        `Missing certificates: ${requiredCerts.filter(rc => !matchedCerts.includes(rc)).join(', ')}`,
-    pass: certsPass, icon: Award
-  })
-  if (certsPass) score += 20
+  const isQualified = c.status === 'qualified' || c.status === 'available'
+  reasons.push({ text: isQualified ? 'Ready to Work' : `Status: ${c.status}`, pass: isQualified, icon: CheckCircle })
+  if (isQualified) score += 25
 
-  // Availability
   const availDate = c.availability ? new Date(c.availability) : null
-  const availPass = !availDate || availDate <= new Date('2025-09-01')
-  reasons.push({
-    text: availPass ? `Available: ${c.availability || 'Immediately'}` : `Not available until ${c.availability}`,
-    pass: availPass, icon: Clock
-  })
-  if (availPass) score += 10
+  const availPass = !availDate || availDate <= new Date('2025-09-30')
+  reasons.push({ text: availPass ? `Available: ${c.availability || 'Now'}` : `Available: ${c.availability}`, pass: availPass, icon: Clock })
+  if (availPass) score += 20
+
+  const hasCerts = c.certificates && c.certificates.length > 0
+  reasons.push({ text: hasCerts ? `${c.certificates.length} certificates` : 'No certificates', pass: hasCerts, icon: Award })
+  if (hasCerts) score += 10
+
+  const expPass = c.experienceYears >= 4
+  reasons.push({ text: `${c.experienceYears} yrs experience`, pass: expPass, icon: Banknote })
+  if (expPass) score += 10
 
   return { score, reasons }
 }
 
+function scoreColor(s: number) { return s >= 80 ? '#15803d' : s >= 60 ? '#b8942e' : '#b91c1c' }
+function scoreBg(s: number)    { return s >= 80 ? '#f0fdf4' : s >= 60 ? '#fefce8' : '#fef2f2' }
+function scoreLabel(s: number) { return s >= 80 ? 'Strong Match' : s >= 60 ? 'Good Match' : 'Partial Match' }
+
+const statusConfig: Record<string, { label: string; cls: string }> = {
+  active:    { label: 'Active',    cls: 'badge-green'  },
+  tender:    { label: 'Tender',    cls: 'badge-yellow' },
+  completed: { label: 'Completed', cls: 'badge-blue'   },
+  cancelled: { label: 'Cancelled', cls: 'badge-red'    },
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
 export default function Matching() {
-  const [selectedVacancy, setSelectedVacancy] = useState(vacancies[0].id)
-  const [mode, setMode] = useState<'vacancy' | 'candidate'>('vacancy')
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
+  const [selectedPosition, setSelectedPosition] = useState<string>('')
   const [search, setSearch] = useState('')
+  const [filterLocation, setFilterLocation] = useState('')
+  const [filterDiscipline, setFilterDiscipline] = useState('')
+  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [assignedMap, setAssignedMap] = useState<Record<number, number[]>>({})
 
-  const vacancy = vacancies.find(v => v.id === selectedVacancy)!
+  const selectedProject = projects.find(p => p.id === selectedProjectId) ?? null
+  const positions = selectedProject ? (projectPositions[selectedProject.id] ?? []) : []
+  const assignedIds = selectedProject ? (assignedMap[selectedProject.id] ?? []) : []
 
-  const matchedCandidates = candidates
-    .map(c => ({ ...c, ...computeMatch(c, vacancy) }))
-    .sort((a, b) => b.score - a.score)
+  const allLocations = [...new Set(candidates.map(c => c.location))].sort()
+  const allDisciplines = [...new Set(candidates.map(c => c.discipline))].sort()
+
+  const matchedCandidates = selectedProject
+    ? candidates
+        .map(c => ({ ...c, ...computeMatch(c, selectedProject.id, selectedPosition) }))
+        .sort((a, b) => b.score - a.score)
+    : []
 
   const filtered = matchedCandidates.filter(c => {
-    const q = search.toLowerCase()
-    return c.name.toLowerCase().includes(q) || c.role.toLowerCase().includes(q) || c.location.toLowerCase().includes(q)
+    if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.role.toLowerCase().includes(search.toLowerCase())) return false
+    if (filterLocation && c.location !== filterLocation) return false
+    if (filterDiscipline && c.discipline !== filterDiscipline) return false
+    return true
   })
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+  const strongCount = filtered.filter(c => c.score >= 80).length
+  const goodCount   = filtered.filter(c => c.score >= 60 && c.score < 80).length
+
+  const fmt = (d: string) =>
+    new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  function assign(candidateId: number) {
+    if (!selectedProject) return
+    setAssignedMap(prev => ({
+      ...prev,
+      [selectedProject.id]: [...(prev[selectedProject.id] ?? []), candidateId]
+    }))
+  }
+
+  function unassign(candidateId: number) {
+    if (!selectedProject) return
+    setAssignedMap(prev => ({
+      ...prev,
+      [selectedProject.id]: (prev[selectedProject.id] ?? []).filter(id => id !== candidateId)
+    }))
+  }
+
+  // ── Project list view ─────────────────────────────────────────────────────
+  if (!selectedProject) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         <div>
-          <h1 className="page-title">Candidate Matching</h1>
-          <p style={{ color: '#000000', fontSize: '1.05rem', margin: '0.25rem 0 0' }}>AI-assisted candidate-to-vacancy matching with explainable scores</p>
+          <h1 className="page-title">Matching</h1>
+          <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
+            Select a project to match and assign candidates to open positions
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.875rem', background: 'rgba(184,148,46,0.1)', border: '1px solid rgba(184,148,46,0.3)', borderRadius: '0.5rem', fontSize: '1.05rem', color: '#b8942e' }}>
-            <Brain size={14} />AI Matching Active
-          </div>
-        </div>
-      </div>
 
-      {/* Mode tabs */}
-      <div className="tab-bar">
-        <button className={`tab ${mode === 'vacancy' ? 'active' : ''}`} onClick={() => setMode('vacancy')}>Match Candidates to Vacancy</button>
-        <button className={`tab ${mode === 'candidate' ? 'active' : ''}`} onClick={() => setMode('candidate')}>Match Vacancies to Candidate</button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '1.25rem', alignItems: 'start' }}>
-        {/* Vacancy selector */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <div className="card" style={{ padding: '0.875rem' }}>
-            <h3 className="section-title" style={{ marginBottom: '0.875rem' }}>Select Vacancy</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-              {vacancies.filter(v => v.status === 'active').map(v => (
-                <button
-                  key={v.id}
-                  onClick={() => setSelectedVacancy(v.id)}
-                  style={{
-                    background: selectedVacancy === v.id ? 'rgba(184,148,46,0.12)' : 'transparent',
-                    border: selectedVacancy === v.id ? '1px solid rgba(184,148,46,0.3)' : '1px solid transparent',
-                    borderRadius: '0.5rem', padding: '0.625rem 0.75rem', textAlign: 'left', cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                >
-                  <div style={{ fontSize: '1.05rem', fontWeight: 600, color: '#000000' }}>{v.title}</div>
-                  <div style={{ fontSize: '0.9rem', marginTop: '0.2rem', color: '#000000' }}>{v.client} • {v.location}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Vacancy requirements */}
-          <div className="card" style={{ padding: '0.875rem' }}>
-            <h4 className="label" style={{ marginBottom: '0.75rem' }}>Vacancy Requirements</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {[
-                { label: 'Discipline', value: vacancy.discipline },
-                { label: 'Location', value: vacancy.location },
-                { label: 'Salary', value: vacancy.salary },
-                { label: 'Type', value: vacancy.type },
-              ].map(r => (
-                <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.05rem' }}>
-                  <span style={{ color: '#000000', fontWeight: 500 }}>{r.label}</span>
-                  <span style={{ color: '#000000', fontWeight: 700 }}>{r.value}</span>
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          {projects.map((p, i) => {
+            const st = statusConfig[p.status] ?? { label: p.status, cls: 'badge-gray' }
+            const pos = projectPositions[p.id] ?? []
+            const totalRoles = pos.reduce((a, r) => a + r.qty, 0)
+            const assigned = (assignedMap[p.id] ?? []).length
+            return (
+              <button
+                key={p.id}
+                onClick={() => { setSelectedProjectId(p.id); setSearch(''); setFilterLocation(''); setFilterDiscipline(''); setSelectedPosition(''); setExpandedId(null) }}
+                style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', padding: '1rem 1.25rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', borderBottom: i < projects.length - 1 ? '1px solid #f3f4f6' : 'none', transition: 'background 0.12s' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#fafaf9'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              >
+                <div style={{ width: 42, height: 42, borderRadius: '0.625rem', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Building2 size={18} style={{ color: '#b8942e' }} />
                 </div>
-              ))}
-              {vacancy.requiredCerts && vacancy.requiredCerts.length > 0 && (
-                <div>
-                  <div style={{ fontSize: '0.85rem', color: '#000000', fontWeight: 600, marginBottom: '0.3rem' }}>Required Certs</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                    {vacancy.requiredCerts.map(c => (
-                      <span key={c} className="badge badge-gold">{c}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#111' }}>{p.name}</div>
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#b8942e', fontWeight: 600 }}>{p.client}</span>
+                    <span style={{ fontSize: '0.78rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 3 }}><MapPin size={10} />{p.location}</span>
+                    <span style={{ fontSize: '0.78rem', color: '#6b7280', display: 'flex', alignItems: 'center', gap: 3 }}><Calendar size={10} />{fmt(p.startDate)} – {fmt(p.endDate)}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                    {pos.map(r => (
+                      <span key={r.role} style={{ padding: '0.15rem 0.45rem', background: '#fdfaf3', border: '1px solid #e9d98a', borderRadius: '0.3rem', fontSize: '0.7rem', fontWeight: 600, color: '#92400e' }}>{r.role} ×{r.qty}</span>
                     ))}
                   </div>
                 </div>
-              )}
+                <div style={{ display: 'flex', gap: '1.5rem', flexShrink: 0 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111' }}>{totalRoles}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>Positions</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#15803d' }}>{assigned}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>Assigned</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111' }}>{p.value}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>Value</div>
+                  </div>
+                </div>
+                <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span className={`badge ${st.cls}`} style={{ fontSize: '0.72rem' }}>{st.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.75rem', background: '#1a1a2e', borderRadius: '0.4rem', fontSize: '0.78rem', fontWeight: 600, color: '#fff' }}>
+                    <Zap size={11} style={{ color: '#b8942e' }} />Match & Assign
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Split-panel matches view ──────────────────────────────────────────────
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button className="btn-ghost" style={{ fontSize: '0.85rem' }} onClick={() => setSelectedProjectId(null)}>
+            <ArrowLeft size={14} />All Projects
+          </button>
+          <div>
+            <h1 className="page-title" style={{ margin: 0 }}>{selectedProject.name}</h1>
+            <p style={{ color: '#b8942e', fontSize: '0.82rem', margin: '0.1rem 0 0', fontWeight: 600 }}>
+              {selectedProject.client} · {selectedProject.location}
+            </p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.875rem', background: '#fefce8', border: '1px solid #e9d98a', borderRadius: '0.5rem', fontSize: '0.82rem', color: '#b8942e', fontWeight: 600 }}>
+          <Zap size={13} />Matching Engine Active
+        </div>
+      </div>
+
+      {/* Two-column body */}
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '1.25rem', alignItems: 'start' }}>
+
+        {/* ── Left: project positions ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+          {/* Positions needed */}
+          <div className="card" style={{ padding: '1.1rem' }}>
+            <p style={{ margin: '0 0 0.75rem', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              Positions Needed
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              {/* All positions button */}
+              <button
+                onClick={() => setSelectedPosition('')}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '0.55rem 0.75rem', borderRadius: '0.4rem', border: 'none', cursor: 'pointer',
+                  background: selectedPosition === '' ? '#1a1a2e' : '#f9fafb',
+                  transition: 'all 0.12s',
+                }}
+              >
+                <span style={{ fontSize: '0.82rem', fontWeight: 600, color: selectedPosition === '' ? '#fff' : '#374151' }}>All Positions</span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: selectedPosition === '' ? '#b8942e' : '#9ca3af' }}>
+                  {positions.reduce((a, r) => a + r.qty, 0)} total
+                </span>
+              </button>
+              {positions.map(pos => (
+                <button
+                  key={pos.role}
+                  onClick={() => setSelectedPosition(pos.role === selectedPosition ? '' : pos.role)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '0.55rem 0.75rem', borderRadius: '0.4rem', border: 'none', cursor: 'pointer',
+                    background: selectedPosition === pos.role ? '#1a1a2e' : '#f9fafb',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600, color: selectedPosition === pos.role ? '#fff' : '#374151' }}>{pos.role}</div>
+                    <div style={{ fontSize: '0.7rem', color: selectedPosition === pos.role ? '#b8942e' : '#9ca3af', marginTop: '0.1rem' }}>{pos.discipline}</div>
+                  </div>
+                  <span style={{
+                    padding: '0.1rem 0.45rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 700,
+                    background: selectedPosition === pos.role ? 'rgba(184,148,46,0.2)' : '#e5e7eb',
+                    color: selectedPosition === pos.role ? '#b8942e' : '#6b7280',
+                  }}>×{pos.qty}</span>
+                </button>
+              ))}
             </div>
+          </div>
+
+          {/* Summary */}
+          <div className="card" style={{ padding: '1.1rem' }}>
+            <p style={{ margin: '0 0 0.75rem', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              Match Summary
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {[
+                { label: 'Candidates shown', value: filtered.length,  color: '#111'     },
+                { label: 'Strong match (80%+)', value: strongCount,   color: '#15803d'  },
+                { label: 'Good match (60–79%)', value: goodCount,     color: '#b8942e'  },
+                { label: 'Assigned so far',   value: assignedIds.length, color: '#2563eb' },
+              ].map(s => (
+                <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#6b7280', fontWeight: 500 }}>{s.label}</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: s.color }}>{s.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Project details */}
+          <div className="card" style={{ padding: '1.1rem' }}>
+            <p style={{ margin: '0 0 0.75rem', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              Project Info
+            </p>
+            {[
+              { label: 'Client',   value: selectedProject.client },
+              { label: 'Sector',   value: selectedProject.sector },
+              { label: 'Stage',    value: selectedProject.stage },
+              { label: 'Start',    value: fmt(selectedProject.startDate) },
+              { label: 'End',      value: fmt(selectedProject.endDate) },
+              { label: 'Value',    value: selectedProject.value },
+              { label: 'Priority', value: selectedProject.priority },
+            ].map(r => (
+              <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', borderBottom: '1px solid #f3f4f6' }}>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 500 }}>{r.label}</span>
+                <span style={{ fontSize: '0.78rem', color: '#111', fontWeight: 600 }}>{r.value}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Match results */}
+        {/* ── Right: candidates ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <h3 className="section-title">
-              Matched Candidates
-              <span style={{ color: '#000000', fontWeight: 400, fontSize: '1.05rem', marginLeft: '0.5rem' }}>({filtered.length} ranked)</span>
-            </h3>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <div className="search-bar" style={{ minWidth: 200 }}>
-                <Search size={13} />
-                <input className="input" placeholder="Filter candidates..." value={search} onChange={e => setSearch(e.target.value)} />
+
+          {/* Search + filters */}
+          <div className="card" style={{ padding: '0.875rem 1rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <Filter size={13} style={{ color: '#9ca3af', flexShrink: 0 }} />
+              <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
+                <Search size={12} style={{ position: 'absolute', left: '0.6rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                <input
+                  className="input"
+                  style={{ paddingLeft: '1.75rem', fontSize: '0.82rem' }}
+                  placeholder="Search name or role..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
               </div>
+              <select className="input" style={{ fontSize: '0.82rem', width: 'auto' }} value={filterLocation} onChange={e => setFilterLocation(e.target.value)}>
+                <option value="">All Locations</option>
+                {allLocations.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+              <select className="input" style={{ fontSize: '0.82rem', width: 'auto' }} value={filterDiscipline} onChange={e => setFilterDiscipline(e.target.value)}>
+                <option value="">All Disciplines</option>
+                {allDisciplines.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              {(search || filterLocation || filterDiscipline) && (
+                <button className="btn-ghost" style={{ fontSize: '0.78rem', color: '#b91c1c' }} onClick={() => { setSearch(''); setFilterLocation(''); setFilterDiscipline('') }}>
+                  Clear
+                </button>
+              )}
             </div>
           </div>
 
-          {filtered.map((c) => (
-            <div key={c.id} className="card" style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
-                background: c.score >= 80 ? 'linear-gradient(135deg,#b8942e,#d4af5a)' : '#f1f5f9',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: c.score >= 80 ? '#ffffff' : '#000000', fontWeight: 700, fontSize: '1.05rem'
-              }}>{c.name.split(' ').map(n => n[0]).join('')}</div>
+          <div style={{ fontSize: '0.82rem', color: '#6b7280' }}>
+            <span style={{ fontWeight: 700, color: '#111' }}>{filtered.length}</span> candidates ranked
+            {selectedPosition && <span> for <span style={{ fontWeight: 600, color: '#b8942e' }}>{selectedPosition}</span></span>}
+          </div>
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, color: '#000000', fontSize: '1.05rem' }}>{c.name}</div>
-                    <div style={{ fontSize: '1.05rem', color: '#000000', marginTop: '0.2rem' }}>{c.role} • {c.discipline}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '1.05rem', color: '#000000', marginTop: '0.2rem' }}>
-                      <MapPin size={11} />{c.location} • £{(c.salary / 1000).toFixed(0)}k • {c.experienceYears}yrs exp
+          {/* Candidate cards */}
+          {filtered.map((c, rank) => {
+            const isExpanded = expandedId === c.id
+            const isAssigned = assignedIds.includes(c.id)
+            const passCount = c.reasons.filter(r => r.pass).length
+            return (
+              <div key={c.id} className="card" style={{
+                padding: '1rem',
+                border: isAssigned ? '1px solid #93c5fd' : c.score >= 80 ? '1px solid #bbf7d0' : '1px solid #e5e7eb'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
+
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', width: 18, paddingTop: '0.3rem', flexShrink: 0, textAlign: 'center' }}>#{rank + 1}</div>
+
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b8942e', fontWeight: 700, fontSize: '0.72rem' }}>
+                    {c.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111' }}>{c.name}</span>
+                          {isAssigned && <span className="badge badge-blue" style={{ fontSize: '0.68rem' }}>Assigned</span>}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.1rem' }}>{c.role} · {c.discipline}</div>
+                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', fontSize: '0.74rem', color: '#6b7280' }}><MapPin size={10} />{c.location}</span>
+                          <span style={{ fontSize: '0.74rem', color: '#6b7280' }}>£{(c.salary / 1000).toFixed(0)}k</span>
+                          <span style={{ fontSize: '0.74rem', color: '#6b7280' }}>{c.experienceYears} yrs exp</span>
+                          <span style={{ display: 'flex', gap: '1px' }}>
+                            {[1,2,3,4,5].map(s => <Star key={s} size={10} fill={s <= c.rating ? '#b8942e' : 'none'} color={s <= c.rating ? '#b8942e' : '#d1d5db'} />)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                        <div style={{ padding: '0.35rem 0.75rem', borderRadius: '0.5rem', background: scoreBg(c.score), border: `1px solid ${scoreColor(c.score)}30` }}>
+                          <div style={{ fontSize: '1.2rem', fontWeight: 800, color: scoreColor(c.score), lineHeight: 1 }}>{c.score}%</div>
+                          <div style={{ fontSize: '0.62rem', fontWeight: 600, color: scoreColor(c.score), marginTop: '0.1rem', whiteSpace: 'nowrap' }}>{scoreLabel(c.score)}</div>
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: '0.25rem' }}>{passCount}/{c.reasons.length} criteria</div>
+                      </div>
+                    </div>
+
+                    {/* Criteria pills */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.625rem' }}>
+                      {c.reasons.map((r, i) => {
+                        const Icon = r.icon
+                        return (
+                          <span key={i} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+                            padding: '0.18rem 0.45rem', borderRadius: '0.3rem', fontSize: '0.7rem', fontWeight: 600,
+                            background: r.pass ? '#f0fdf4' : '#fef2f2',
+                            color: r.pass ? '#15803d' : '#b91c1c',
+                            border: `1px solid ${r.pass ? '#bbf7d0' : '#fecaca'}`
+                          }}>
+                            {r.pass ? <CheckCircle size={9} /> : <XCircle size={9} />}
+                            <Icon size={9} />{r.text}
+                          </span>
+                        )
+                      })}
+                    </div>
+
+                    {/* Expanded detail */}
+                    {isExpanded && (
+                      <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #f3f4f6', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1.5rem' }}>
+                        <div>
+                          <p style={{ margin: '0 0 0.3rem', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Certificates</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.2rem' }}>
+                            {c.certificates.map(cert => (
+                              <span key={cert} style={{ padding: '0.12rem 0.4rem', background: '#fdfaf3', border: '1px solid #e9d98a', borderRadius: '0.25rem', fontSize: '0.7rem', fontWeight: 600, color: '#92400e' }}>{cert}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p style={{ margin: '0 0 0.3rem', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Details</p>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.18rem' }}>
+                            <span style={{ fontSize: '0.74rem', color: '#374151' }}>Notice: {c.noticePeriod}</span>
+                            <span style={{ fontSize: '0.74rem', color: '#374151' }}>Available: {c.availability}</span>
+                            <span style={{ fontSize: '0.74rem', color: '#374151' }}>Travel radius: {c.travelRadius} miles</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Actions row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.625rem', paddingTop: '0.625rem', borderTop: '1px solid #f3f4f6' }}>
+                      <button
+                        onClick={() => setExpandedId(isExpanded ? null : c.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.74rem', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 500 }}
+                      >
+                        {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        {isExpanded ? 'Less detail' : 'More detail'}
+                      </button>
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <Link to={`/candidates/${c.id}`} className="btn-secondary" style={{ fontSize: '0.76rem', padding: '0.3rem 0.65rem' }}>
+                          <Users size={11} />Profile
+                        </Link>
+                        {isAssigned
+                          ? <button className="btn-secondary" style={{ fontSize: '0.76rem', padding: '0.3rem 0.65rem', color: '#b91c1c' }} onClick={() => unassign(c.id)}>
+                              Remove
+                            </button>
+                          : <button className="btn-primary" style={{ fontSize: '0.76rem', padding: '0.3rem 0.65rem' }} onClick={() => assign(c.id)}>
+                              <Zap size={11} />Assign
+                            </button>
+                        }
+                      </div>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: '0.8rem', color: '#000000', marginBottom: '0.25rem' }}>Match Score</div>
-                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: c.score >= 80 ? '#34d399' : c.score >= 65 ? '#fbbf24' : '#f87171', lineHeight: 1 }}>{c.score}%</div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: '0.75rem' }}>
-                  <MatchBar score={c.score} />
-                </div>
-
-                {/* Explainable reasons */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', marginTop: '0.625rem' }}>
-                  {c.reasons.map((r, i) => (
-                    <span key={i} style={{
-                      display: 'flex', alignItems: 'center', gap: '0.3rem',
-                      fontSize: '0.82rem', fontWeight: 600,
-                      color: r.pass ? '#16a34a' : '#dc2626',
-                      background: r.pass ? '#dcfce7' : '#fee2e2',
-                      padding: '0.15rem 0.5rem', borderRadius: '4px'
-                    }}>
-                      {r.pass ? <CheckCircle size={10} /> : <XCircle size={10} />}
-                      {r.text}
-                    </span>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', gap: '1px', marginTop: '0.5rem' }}>
-                  {[1, 2, 3, 4, 5].map(s => <Star key={s} size={12} fill={s <= c.rating ? '#b8942e' : 'none'} color={s <= c.rating ? '#b8942e' : '#d1d5db'} />)}
                 </div>
               </div>
+            )
+          })}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
-                <Link to={`/candidates/${c.id}`} className="btn-secondary" style={{ fontSize: '1.05rem', padding: '0.35rem 0.75rem' }}>Profile</Link>
-                <button className="btn-primary" style={{ fontSize: '1.05rem', padding: '0.35rem 0.75rem' }}>
-                  <Zap size={12} />Submit
-                </button>
-              </div>
+          {filtered.length === 0 && (
+            <div className="card" style={{ padding: '2.5rem', textAlign: 'center' }}>
+              <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>No candidates match the current filters.</p>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

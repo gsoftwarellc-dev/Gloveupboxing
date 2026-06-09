@@ -63,9 +63,6 @@ export default function GeoMapping() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div>
         <h1 className="page-title">Geo Mapping & Radius Search</h1>
-        <p style={{ color: '#000000', fontSize: '1.05rem', margin: '0.25rem 0 0' }}>
-          UK-focused coverage view for candidates and vacancies
-        </p>
       </div>
 
       {/* Controls */}
@@ -129,9 +126,6 @@ export default function GeoMapping() {
                 <Globe size={15} style={{ color: '#b8942e' }} />
                 <h2 className="section-title" style={{ margin: 0 }}>UK coverage map</h2>
               </div>
-              <p style={{ margin: 0, color: '#475569', fontSize: '0.92rem' }}>
-                Focused on the core recruitment hubs around Manchester and the surrounding UK market
-              </p>
             </div>
             <div style={{
               display: 'flex',

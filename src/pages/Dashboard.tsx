@@ -2,7 +2,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts'
-import { Users, Building2, Briefcase, Zap, TrendingUp, TrendingDown, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Users, Building2, Briefcase, Zap, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const placementsData = [
@@ -51,26 +51,20 @@ const upcomingInterviews = [
   { candidate: 'Ryan Moss', role: 'Project Manager', client: 'Skanska', date: 'Thu 3:30pm', status: 'pending' },
 ]
 
-function StatCard({ icon: Icon, label, value, change, up, color }: any) {
+function StatCard({ icon: Icon, label, value, color }: any) {
   return (
-    <div className="stat-card">
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div>
-          <p className="stat-label">{label}</p>
-          <p className="stat-value" style={{ marginTop: '0.25rem' }}>{value}</p>
-        </div>
-        <div style={{
-          width: 40, height: 40, borderRadius: '10px',
-          background: `${color}20`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <Icon size={20} style={{ color }} />
-        </div>
+    <div className="card" style={{ padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: '0.625rem', flexShrink: 0,
+        background: `${color}15`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <Icon size={20} style={{ color }} />
       </div>
-      <span className={`stat-change ${up ? 'up' : 'down'}`}>
-        {up ? <TrendingUp size={12} style={{ display: 'inline', marginRight: 3 }} /> : <TrendingDown size={12} style={{ display: 'inline', marginRight: 3 }} />}
-        {change} vs last month
-      </span>
+      <div>
+        <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280', fontWeight: 500 }}>{label}</p>
+        <p style={{ margin: '0.2rem 0 0', fontSize: '1.35rem', fontWeight: 700, color: '#111', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</p>
+      </div>
     </div>
   )
 }
@@ -91,7 +85,6 @@ export default function Dashboard() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p style={{ color: '#000000', fontSize: '1.05rem', margin: '0.25rem 0 0' }}>Welcome back — here's what's happening today</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <select className="input" style={{ width: 'auto', fontSize: '1.05rem' }}>
@@ -108,15 +101,51 @@ export default function Dashboard() {
       </div>
 
       {/* KPI cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.75rem' }}>
         <StatCard icon={Users} label="Total Candidates" value="1,284" change="+12%" up color="#b8942e" />
         <StatCard icon={Building2} label="Active Clients" value="87" change="+5%" up color="#60a5fa" />
-        <StatCard icon={Briefcase} label="Open Vacancies" value="143" change="-3%" up={false} color="#c084fc" />
-        <StatCard icon={AlertCircle} label="New Applications" value="38" change="+24%" up color="#f97316" />
-        <StatCard icon={Clock} label="CVs Sent (MTD)" value="91" change="+9%" up color="#8b5cf6" />
+        <StatCard icon={Briefcase} label="Open Job Posts" value="143" change="-3%" up={false} color="#c084fc" />
+        <StatCard icon={AlertCircle} label="New Candidates Applied" value="38" change="+24%" up color="#f97316" />
         <StatCard icon={Zap} label="Interviews Arranged" value="27" change="+15%" up color="#3b82f6" />
-        <StatCard icon={CheckCircle} label="Placements (MTD)" value="43" change="+18%" up color="#34d399" />
         <StatCard icon={TrendingUp} label="Revenue (MTD)" value="£301k" change="+22%" up color="#fbbf24" />
+      </div>
+
+      {/* Upcoming Interviews — directly after stat cards */}
+      <div className="card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h2 className="section-title">Upcoming Interviews</h2>
+          <Link to="/candidates" style={{ fontSize: '0.82rem', color: '#b8942e', textDecoration: 'none' }}>View all</Link>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {upcomingInterviews.map((iv, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: '1rem',
+              padding: '0.7rem 0.875rem',
+              background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.5rem'
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                background: '#1a1a2e',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#b8942e', fontWeight: 700, fontSize: '0.7rem'
+              }}>
+                {iv.candidate.split(' ').map((n: string) => n[0]).join('')}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 700, color: '#111' }}>{iv.candidate}</p>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', marginTop: '0.1rem' }}>{iv.role} · {iv.client}</p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', color: '#374151' }}>
+                  <Clock size={11} />{iv.date}
+                </span>
+                <span className={`badge ${iv.status === 'confirmed' ? 'badge-green' : 'badge-yellow'}`} style={{ fontSize: '0.72rem' }}>
+                  {iv.status}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Charts row */}
@@ -176,113 +205,18 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Pipeline + Activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-        {/* Recruitment pipeline */}
-        <div className="card">
-          <h2 className="section-title" style={{ marginBottom: '1.25rem' }}>Recruitment Pipeline</h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={pipelineData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f5" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: '#000000' }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="stage" tick={{ fontSize: 11, fill: '#000000' }} axisLine={false} tickLine={false} width={65} />
-              <Tooltip contentStyle={TooltipStyle} />
-              <Bar dataKey="count" fill="#b8942e" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Recent activity */}
-        <div className="card">
-          <h2 className="section-title" style={{ marginBottom: '1rem' }}>Recent Activity</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-            {recentActivity.map(a => (
-              <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.625rem 0', borderBottom: '1px solid #f8f9fb' }}>
-                <div style={{
-                  width: 30, height: 30, borderRadius: '8px',
-                  background: `${a.color}15`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                }}>
-                  <a.icon size={14} style={{ color: a.color }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: '1.05rem', color: '#000000', lineHeight: 1.4 }}>{a.text}</p>
-                  <p style={{ margin: 0, fontSize: '1.05rem', color: '#000000', marginTop: '0.15rem' }}>{a.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-        {/* Top recruiters */}
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h2 className="section-title">Top Recruiters</h2>
-            <Link to="/settings" style={{ fontSize: '1.05rem', color: '#b8942e', textDecoration: 'none' }}>View all</Link>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-            {topRecruiters.map((r, i) => (
-              <div key={r.name}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%',
-                      background: i === 0 ? 'linear-gradient(135deg,#b8942e,#d4af5a)' : '#f1f5f9',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: i === 0 ? '#ffffff' : '#000000', fontWeight: 700, fontSize: '0.8rem'
-                    }}>
-                      {r.name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <span style={{ fontSize: '1.05rem', color: '#000000' }}>{r.name}</span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '1.05rem', fontWeight: 600, color: '#000000' }}>{r.placements}</span>
-                    <span style={{ fontSize: '1.05rem', color: '#000000' }}> / {r.target}</span>
-                    <span style={{ fontSize: '1.05rem', color: '#000000', marginLeft: '0.5rem' }}>{r.revenue}</span>
-                  </div>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${(r.placements / r.target) * 100}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Upcoming interviews */}
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h2 className="section-title">Upcoming Interviews</h2>
-            <Link to="/candidates" style={{ fontSize: '1.05rem', color: '#b8942e', textDecoration: 'none' }}>View all</Link>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            {upcomingInterviews.map((iv, i) => (
-              <div key={i} style={{
-                background: '#f8f9fb', borderRadius: '0.5rem', padding: '0.75rem',
-                display: 'flex', alignItems: 'center', gap: '0.75rem',
-                border: '1px solid #e8eaf0'
-              }}>
-                <div className="avatar">{iv.candidate.split(' ').map(n => n[0]).join('')}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: '#000000' }}>{iv.candidate}</p>
-                  <p style={{ margin: 0, fontSize: '1.05rem', color: '#000000' }}>{iv.role} • {iv.client}</p>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '1.05rem', color: '#000000' }}>
-                    <Clock size={11} />
-                    {iv.date}
-                  </div>
-                  <span className={`badge ${iv.status === 'confirmed' ? 'badge-green' : 'badge-yellow'}`} style={{ marginTop: '0.25rem' }}>
-                    {iv.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Bottom row — Pipeline */}
+      <div className="card">
+        <h2 className="section-title" style={{ marginBottom: '1.25rem' }}>Recruitment Pipeline</h2>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={pipelineData} layout="vertical">
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f5" horizontal={false} />
+            <XAxis type="number" tick={{ fontSize: 11, fill: '#000000' }} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="stage" tick={{ fontSize: 11, fill: '#000000' }} axisLine={false} tickLine={false} width={65} />
+            <Tooltip contentStyle={TooltipStyle} />
+            <Bar dataKey="count" fill="#b8942e" radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   )

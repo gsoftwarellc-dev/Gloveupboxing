@@ -15,6 +15,7 @@ import AdminSettings from './pages/AdminSettings'
 import GeoMapping from './pages/GeoMapping'
 import Reports from './pages/Reports'
 import ProjectDetail from './pages/ProjectDetail'
+import PostJob from './pages/PostJob'
 import PublicJobs from './pages/website/PublicJobs'
 import JobDetail from './pages/website/JobDetail'
 import CandidateApply from './pages/website/CandidateApply'
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="clients" element={<Clients />} />
           <Route path="clients/:id" element={<ClientDetail />} />
           <Route path="vacancies" element={<Vacancies />} />
+          <Route path="vacancies/new" element={<PostJob />} />
           <Route path="vacancies/:id" element={<VacancyDetail />} />
           <Route path="projects" element={<Projects />} />
           <Route path="projects/:id" element={<ProjectDetail />} />

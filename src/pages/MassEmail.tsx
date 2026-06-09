@@ -50,7 +50,6 @@ export default function MassEmail() {
       <div className="tab-bar">
         <button className={`tab ${tab === 'campaigns' ? 'active' : ''}`} onClick={() => setTab('campaigns')}>Campaigns</button>
         <button className={`tab ${tab === 'compose' ? 'active' : ''}`} onClick={() => { setTab('compose'); setComposeStep(1) }}>Compose</button>
-        <button className={`tab ${tab === 'templates' ? 'active' : ''}`} onClick={() => setTab('templates')}>Templates</button>
       </div>
 
       {tab === 'campaigns' && (
@@ -253,23 +252,6 @@ I hope this message finds you well..." value={body} onChange={e => setBody(e.tar
         </div>
       )}
 
-      {tab === 'templates' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-          {templates.map(t => (
-            <div key={t.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: '#000000' }}>{t.name}</h4>
-                <span className="badge badge-gold">{t.category}</span>
-              </div>
-              <p style={{ margin: 0, fontSize: '1.05rem', color: '#000000', lineHeight: 1.5 }}>Template for sending {t.name.toLowerCase()} communications to candidates and clients.</p>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="btn-secondary" style={{ flex: 1, justifyContent: 'center', fontSize: '1.05rem' }}><Eye size={13} />Preview</button>
-                <button className="btn-primary" style={{ flex: 1, justifyContent: 'center', fontSize: '1.05rem' }}><Mail size={13} />Use</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

@@ -26,7 +26,7 @@ export default function PublicJobs() {
   return (
     <div style={{ minHeight: '100vh', width: '100%', background: '#f5f6fa', fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
-      <header style={{ background: '#1e2535', borderBottom: '3px solid #b8942e' }}>
+      <header style={{ background: '#F8F7F5', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -34,8 +34,8 @@ export default function PublicJobs() {
             </div>
             <nav style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
               <a href="#" style={{ color: '#b8942e', textDecoration: 'none', fontSize: '1rem', fontWeight: 600 }}>Jobs</a>
-              <a href="#" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '1rem' }}>About</a>
-              <a href="#" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '1rem' }}>Contact</a>
+              <a href="#" style={{ color: '#374151', textDecoration: 'none', fontSize: '1rem' }}>About</a>
+              <a href="#" style={{ color: '#374151', textDecoration: 'none', fontSize: '1rem' }}>Contact</a>
               <Link to="/website-preview/apply" style={{ padding: '0.45rem 1rem', background: '#b8942e', color: '#fff', borderRadius: '6px', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 700 }}>Register CV</Link>
             </nav>
           </div>

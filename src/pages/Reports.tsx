@@ -163,10 +163,8 @@ export default function Reports() {
       {/* ── KPI Summary Row ─────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
         <KpiCard icon={Users} label="Candidates Added" value={100} color="#b8942e" />
-        <KpiCard icon={Phone} label="Candidates Contacted" value={74} color="#3b82f6" />
         <KpiCard icon={FileText} label="CVs Sent" value={61} color="#22c55e" />
         <KpiCard icon={CalendarCheck} label="Interviews Arranged" value={34} color="#a855f7" />
-        <KpiCard icon={TrendingUp} label="Offers Made" value={8} color="#f97316" />
         <KpiCard icon={Trophy} label="Placements" value={34} color="#b8942e" />
       </div>
 
@@ -284,61 +282,6 @@ export default function Reports() {
               </div>
             )
           })}
-        </div>
-      </div>
-
-      {/* ── Recruiter Performance Table ──────────────────────────────────── */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '1.25rem 1.25rem 1rem', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <p className="section-title">Recruiter Performance</p>
-          <span className="badge badge-gray">{dateRange}</span>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Recruiter</th>
-                <th>Candidates Added</th>
-                <th>Calls Logged</th>
-                <th>CVs Sent</th>
-                <th>Interviews</th>
-                <th>Placements</th>
-                <th>Hit Rate %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recruiters.map((r, i) => (
-                <tr key={r.name}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-                      <div className="avatar" style={{ fontSize: '0.68rem' }}>
-                        {r.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <span style={{ fontWeight: 700 }}>{r.name}</span>
-                      {i === 0 && (
-                        <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>Top</span>
-                      )}
-                    </div>
-                  </td>
-                  <td>{r.candidatesAdded}</td>
-                  <td>{r.callsLogged}</td>
-                  <td>{r.cvsSent}</td>
-                  <td>{r.interviews}</td>
-                  <td>
-                    <span style={{ fontWeight: 800, color: '#b8942e', fontSize: '1rem' }}>{r.placements}</span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <div className="progress-bar" style={{ width: 60 }}>
-                        <div className="progress-fill" style={{ width: `${r.hitRate}%` }} />
-                      </div>
-                      <span style={{ fontWeight: 700, fontSize: '0.875rem' }}>{r.hitRate}%</span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
 

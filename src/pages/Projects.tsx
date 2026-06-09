@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, MapPin, Calendar, TrendingUp, Users } from 'lucide-react'
+import { Plus, Search, MapPin, Calendar, Users, TrendingUp, ChevronRight } from 'lucide-react'
 import { projects } from '../data/mock'
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
@@ -8,24 +8,6 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
   tender:  { label: 'Tender',  cls: 'badge-yellow' },
   closed:  { label: 'Closed',  cls: 'badge-red' },
   paused:  { label: 'Paused',  cls: 'badge-gray' },
-}
-
-const stageColors: Record<string, string> = {
-  Design: '#60a5fa', Procurement: '#fbbf24', Construction: '#34d399', Handover: '#c084fc'
-}
-
-function ScoreRing({ score }: { score: number }) {
-  const color = score >= 80 ? '#34d399' : score >= 60 ? '#fbbf24' : '#f87171'
-  return (
-    <div style={{
-      width: 52, height: 52, borderRadius: '50%',
-      border: `3px solid ${color}`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0
-    }}>
-      <span style={{ fontWeight: 700, fontSize: '1.05rem', color }}>{score}</span>
-    </div>
-  )
 }
 
 export default function Projects() {
@@ -37,97 +19,115 @@ export default function Projects() {
     return p.name.toLowerCase().includes(q) || p.client.toLowerCase().includes(q) || p.location.toLowerCase().includes(q)
   })
 
+  const totalRoles = projects.reduce((a, p) => a + p.rolesNeeded, 0)
+  const activeCount = projects.filter(p => p.status === 'active').length
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 className="page-title">Project Intelligence</h1>
-          <p style={{ color: '#000000', fontSize: '1.05rem', margin: '0.25rem 0 0' }}>Track construction projects and recruitment opportunities</p>
+          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '0.2rem 0 0' }}>Track construction projects and recruitment opportunities</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowAddModal(true)}><Plus size={15} />Add Project</button>
+        <button className="btn-primary" onClick={() => setShowAddModal(true)}><Plus size={14} />Add Project</button>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
         {[
-          { label: 'Total Projects', value: projects.length, color: '#b8942e' },
-          { label: 'Active', value: projects.filter(p => p.status === 'active').length, color: '#34d399' },
-          { label: 'Total Value', value: '£450M+', color: '#60a5fa' },
-          { label: 'Roles Identified', value: projects.reduce((a, p) => a + p.rolesNeeded, 0), color: '#c084fc' },
+          { label: 'Total Projects', value: projects.length },
+          { label: 'Active', value: activeCount },
+          { label: 'Total Value', value: '£450M+' },
+          { label: 'Roles Identified', value: totalRoles },
         ].map(s => (
-          <div key={s.label} className="card" style={{ textAlign: 'center', padding: '1rem' }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: '1.05rem', color: '#000000', marginTop: '0.2rem' }}>{s.label}</div>
+          <div key={s.label} className="card" style={{ padding: '1.1rem 1.25rem' }}>
+            <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#111', letterSpacing: '-0.03em', lineHeight: 1 }}>{s.value}</div>
+            <div style={{ fontSize: '0.82rem', color: '#6b7280', marginTop: '0.35rem', fontWeight: 500 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Search */}
-      <div className="card" style={{ padding: '0.875rem 1rem' }}>
-        <div className="search-bar">
-          <Search size={14} />
-          <input className="input" placeholder="Search projects, clients, locations..." value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
+      <div style={{ position: 'relative' }}>
+        <Search size={14} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+        <input
+          className="input"
+          style={{ paddingLeft: '2.25rem', fontSize: '0.9rem' }}
+          placeholder="Search projects, clients, locations..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
       </div>
 
-      {/* Projects grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1rem' }}>
-        {filtered.map(p => (
-          <div key={p.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
-              <ScoreRing score={p.opportunityScore} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#000000', lineHeight: 1.3 }}>{p.name}</h3>
+      {/* Projects table-style list */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {filtered.map(p => {
+          const scoreColor = p.opportunityScore >= 80 ? '#15803d' : p.opportunityScore >= 60 ? '#b8942e' : '#b91c1c'
+          const scoreBg = p.opportunityScore >= 80 ? '#f0fdf4' : p.opportunityScore >= 60 ? '#fefce8' : '#fef2f2'
+          return (
+            <div key={p.id} className="card" style={{ padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+
+              {/* Score badge */}
+              <div style={{
+                width: 44, height: 44, borderRadius: '0.5rem',
+                background: scoreBg, flexShrink: 0,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: scoreColor, lineHeight: 1 }}>{p.opportunityScore}</span>
+                <span style={{ fontSize: '0.6rem', color: scoreColor, opacity: 0.7, fontWeight: 600 }}>/ 100</span>
+              </div>
+
+              {/* Project info */}
+              <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111' }}>{p.name}</span>
                   <span className={`badge ${statusConfig[p.status]?.cls || 'badge-gray'}`}>{statusConfig[p.status]?.label || p.status}</span>
                 </div>
-                <div style={{ fontSize: '1.05rem', color: '#b8942e', fontWeight: 600, marginTop: '0.2rem' }}>{p.client}</div>
-                <div style={{ display: 'flex', gap: '0.875rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '1.05rem', color: '#000000' }}><MapPin size={11} />{p.location}</span>
-                  <span style={{ fontSize: '1.05rem', color: '#000000' }}>{p.value}</span>
+                <div style={{ fontSize: '0.85rem', color: '#b8942e', fontWeight: 600, marginTop: '0.15rem' }}>{p.client}</div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem', color: '#6b7280' }}>
+                    <MapPin size={11} />{p.location}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem', color: '#6b7280' }}>
+                    <Calendar size={11} />{p.startDate} – {p.endDate}
+                  </span>
                 </div>
               </div>
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.875rem' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: stageColors[p.stage] || '#888' }}>{p.stage}</div>
-                <div style={{ fontSize: '0.78rem', color: '#000000', marginTop: '0.1rem' }}>Stage</div>
+              {/* Stage + metrics */}
+              <div style={{ display: 'flex', gap: '2rem', flexShrink: 0, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 500, marginBottom: '0.15rem' }}>Stage</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>{p.stage}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 500, marginBottom: '0.15rem' }}>Value</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>{p.value}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 500, marginBottom: '0.15rem' }}>Roles</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>{p.rolesNeeded}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 500, marginBottom: '0.15rem' }}>Contacts</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>{p.contacts}</div>
+                </div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#000000' }}>{p.rolesNeeded}</div>
-                <div style={{ fontSize: '0.78rem', color: '#000000', marginTop: '0.1rem' }}>Roles Needed</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#000000' }}>{p.contacts}</div>
-                <div style={{ fontSize: '0.78rem', color: '#000000', marginTop: '0.1rem' }}>Contacts</div>
-              </div>
-            </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', color: '#000000' }}>
-              <Calendar size={12} />
-              <span>{p.startDate} → {p.endDate}</span>
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                <span style={{ fontSize: '1.05rem', color: '#000000' }}>Opportunity Score</span>
-                <span style={{ fontSize: '1.05rem', color: '#000000' }}>{p.opportunityScore}/100</span>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{
-                  width: `${p.opportunityScore}%`,
-                  background: p.opportunityScore >= 80 ? '#34d399' : p.opportunityScore >= 60 ? '#fbbf24' : '#f87171'
-                }} />
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                <Link to={`/candidates?search=${encodeURIComponent(p.location)}`} className="btn-secondary" style={{ fontSize: '0.82rem', padding: '0.45rem 0.85rem' }}>
+                  <Users size={12} />Find Candidates
+                </Link>
+                <Link to={`/projects/${p.id}`} className="btn-primary" style={{ fontSize: '0.82rem', padding: '0.45rem 0.85rem' }}>
+                  View Intel<ChevronRight size={12} />
+                </Link>
               </div>
             </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button className="btn-secondary" style={{ flex: 1, justifyContent: 'center', fontSize: '1.05rem' }}><Users size={13} />Find Candidates</button>
-              <Link to={`/projects/${p.id}`} className="btn-primary" style={{ flex: 1, justifyContent: 'center', fontSize: '1.05rem' }}><TrendingUp size={13} />View Intel</Link>
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {showAddModal && <AddProjectModal onClose={() => setShowAddModal(false)} />}
