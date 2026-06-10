@@ -6,8 +6,8 @@ import logo from '../../assets/logo-sidebar.png'
 
 const publicVacancies = vacancies.filter(v => v.visibility !== 'Private' && v.status !== 'closed')
 
-const disciplines = ['All', 'Civil', 'Structural', 'Groundworks', 'MEP', 'Commercial', 'H&S']
-const types = ['All', 'Permanent', 'Contract']
+const disciplines = ['All', ...Array.from(new Set(vacancies.map(v => v.discipline))).filter(Boolean)]
+const types = ['All', ...Array.from(new Set(vacancies.map(v => v.type))).filter(Boolean)]
 
 export default function PublicJobs() {
   const [search, setSearch] = useState('')

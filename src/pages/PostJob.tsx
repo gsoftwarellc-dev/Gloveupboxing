@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Globe, Lock, MapPin, Briefcase, ChevronRight } from 'lucide-react'
 
+import { clients as mockClients, projects as mockProjects } from '../data/mock'
+
 const disciplines = ['Civil', 'Structural', 'Groundworks', 'MEP', 'Commercial', 'H&S']
-const clients = ['Balfour Beatty', 'Mace Group', 'Skanska UK', 'Costain Ltd', 'Arup', 'Kier Group']
-const projects = ['— None —', 'Manchester Victoria Gateway', 'London Bridge Residential', 'Birmingham Metro Extension', 'Glasgow City Centre Regen']
+const clients = mockClients.length > 0 ? mockClients.map(c => c.name).sort() : ['Balfour Beatty', 'Mace Group', 'Skanska UK']
+const projects = ['— None —', ...mockProjects.map(p => p.name).sort()]
 const recruiters = ['Tom Bradley', 'Emma Clarke', 'Mark Richards', 'Priya Sharma']
 const certs = ['SMSTS', 'SSSTS', 'CSCS Gold Card', 'CSCS Black Card', 'CSCS Blue Card', 'First Aid at Work', 'CPCS', 'NPORS', 'NEBOSH Diploma', 'IOSH Managing Safely', 'PMP', 'PRINCE2 Practitioner', 'MRICS', 'IStructE Chartership', 'ECS Gold Card', 'CIBSE Membership']
 

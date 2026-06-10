@@ -3,9 +3,52 @@ import { Link } from 'react-router-dom'
 import {
   Zap, Search, Star, MapPin, CheckCircle, XCircle,
   Award, Clock, Banknote, Briefcase, ChevronDown, ChevronUp,
-  Users, Building2, Calendar, ArrowLeft, Filter
+  Users, Building2, Calendar, ArrowLeft, Filter, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { candidates, projects } from '../data/mock'
+
+const PAGE_SIZE = 20
+
+function Pagination({ page, setPage, total }: { page: number; setPage: (fn: (p: number) => number) => void; total: number }) {
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  if (totalPages <= 1) return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+      <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>
+        Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, total)} of {total}
+      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+        <button
+          className="btn-secondary"
+          style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
+          disabled={currentPage === 1}
+          onClick={() => setPage(p => Math.max(1, p - 1))}
+        >
+          <ChevronLeft size={12} />
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+          <button
+            key={n}
+            className={n === currentPage ? 'btn-primary' : 'btn-secondary'}
+            style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem', minWidth: '2.25rem' }}
+            onClick={() => setPage(() => n)}
+          >
+            {n}
+          </button>
+        ))}
+        <button
+          className="btn-secondary"
+          style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
+          disabled={currentPage === totalPages}
+          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+        >
+          <ChevronRight size={12} />
+        </button>
+      </div>
+    </div>
+  )
+}
 
 // ── Project positions needed ──────────────────────────────────────────────────
 
@@ -59,8 +102,8 @@ function computeMatch(c: typeof candidates[0], projectId: number) {
   reasons.push({ text: availPass ? `Available: ${c.availability || 'Now'}` : `Available: ${c.availability}`, pass: availPass, icon: Clock })
   if (availPass) score += 20
 
-  const hasCerts = c.certificates && c.certificates.length > 0
-  reasons.push({ text: hasCerts ? `${c.certificates.length} certificates` : 'No certificates', pass: hasCerts, icon: Award })
+  const hasCerts = !!(c.certificates && c.certificates.length > 0)
+  reasons.push({ text: hasCerts ? `${c.certificates?.length} certificates` : 'No certificates', pass: hasCerts, icon: Award })
   if (hasCerts) score += 10
 
   const expPass = c.experienceYears >= 4
@@ -91,6 +134,8 @@ export default function Matching() {
   const [filterDiscipline, setFilterDiscipline] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [assignedMap, setAssignedMap] = useState<Record<number, number[]>>({})
+  const [projectPage, setProjectPage] = useState(1)
+  const [candidatePage, setCandidatePage] = useState(1)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId) ?? null
   const positions = selectedProject ? (projectPositions[selectedProject.id] ?? []) : []
@@ -115,8 +160,16 @@ export default function Matching() {
   const strongCount = filtered.filter(c => c.score >= 80).length
   const goodCount   = filtered.filter(c => c.score >= 60 && c.score < 80).length
 
+  const paginate = <T,>(items: T[], page: number) => {
+    const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE))
+    const currentPage = Math.min(page, totalPages)
+    return items.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  }
+  const pagedProjects = paginate(projects, projectPage)
+  const pagedFiltered = paginate(filtered, candidatePage)
+
   const fmt = (d: string) =>
-    new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Ongoing'
 
   function assign(candidateId: number) {
     if (!selectedProject) return
@@ -141,12 +194,12 @@ export default function Matching() {
         <div>
           <h1 className="page-title">Matching</h1>
           <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
-            Select a project to match and assign candidates to open positions
+            Projects matched with their clients — select one to match and assign candidates to open positions
           </p>
         </div>
 
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          {projects.map((p, i) => {
+          {pagedProjects.map((p, i) => {
             const st = statusConfig[p.status] ?? { label: p.status, cls: 'badge-gray' }
             const pos = projectPositions[p.id] ?? []
             const totalRoles = pos.reduce((a, r) => a + r.qty, 0)
@@ -154,8 +207,8 @@ export default function Matching() {
             return (
               <button
                 key={p.id}
-                onClick={() => { setSelectedProjectId(p.id); setSearch(''); setFilterLocation(''); setFilterDiscipline(''); setSelectedPosition(''); setExpandedId(null) }}
-                style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', padding: '1rem 1.25rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', borderBottom: i < projects.length - 1 ? '1px solid #f3f4f6' : 'none', transition: 'background 0.12s' }}
+                onClick={() => { setSelectedProjectId(p.id); setSearch(''); setFilterLocation(''); setFilterDiscipline(''); setSelectedPosition(''); setExpandedId(null); setCandidatePage(1) }}
+                style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', padding: '1rem 1.25rem', textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', borderBottom: i < pagedProjects.length - 1 ? '1px solid #f3f4f6' : 'none', transition: 'background 0.12s' }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#fafaf9'}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
               >
@@ -199,6 +252,8 @@ export default function Matching() {
             )
           })}
         </div>
+
+        <Pagination page={projectPage} setPage={setProjectPage} total={projects.length} />
       </div>
     )
   }
@@ -239,7 +294,7 @@ export default function Matching() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
               {/* All positions button */}
               <button
-                onClick={() => setSelectedPosition('')}
+                onClick={() => { setSelectedPosition(''); setCandidatePage(1) }}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '0.55rem 0.75rem', borderRadius: '0.4rem', border: 'none', cursor: 'pointer',
@@ -255,7 +310,7 @@ export default function Matching() {
               {positions.map(pos => (
                 <button
                   key={pos.role}
-                  onClick={() => setSelectedPosition(pos.role === selectedPosition ? '' : pos.role)}
+                  onClick={() => { setSelectedPosition(pos.role === selectedPosition ? '' : pos.role); setCandidatePage(1) }}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '0.55rem 0.75rem', borderRadius: '0.4rem', border: 'none', cursor: 'pointer',
@@ -333,19 +388,19 @@ export default function Matching() {
                   style={{ paddingLeft: '1.75rem', fontSize: '0.82rem' }}
                   placeholder="Search name or role..."
                   value={search}
-                  onChange={e => setSearch(e.target.value)}
+                  onChange={e => { setSearch(e.target.value); setCandidatePage(1) }}
                 />
               </div>
-              <select className="input" style={{ fontSize: '0.82rem', width: 'auto' }} value={filterLocation} onChange={e => setFilterLocation(e.target.value)}>
+              <select className="input" style={{ fontSize: '0.82rem', width: 'auto' }} value={filterLocation} onChange={e => { setFilterLocation(e.target.value); setCandidatePage(1) }}>
                 <option value="">All Locations</option>
                 {allLocations.map(l => <option key={l} value={l}>{l}</option>)}
               </select>
-              <select className="input" style={{ fontSize: '0.82rem', width: 'auto' }} value={filterDiscipline} onChange={e => setFilterDiscipline(e.target.value)}>
+              <select className="input" style={{ fontSize: '0.82rem', width: 'auto' }} value={filterDiscipline} onChange={e => { setFilterDiscipline(e.target.value); setCandidatePage(1) }}>
                 <option value="">All Disciplines</option>
                 {allDisciplines.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
               {(search || filterLocation || filterDiscipline) && (
-                <button className="btn-ghost" style={{ fontSize: '0.78rem', color: '#b91c1c' }} onClick={() => { setSearch(''); setFilterLocation(''); setFilterDiscipline('') }}>
+                <button className="btn-ghost" style={{ fontSize: '0.78rem', color: '#b91c1c' }} onClick={() => { setSearch(''); setFilterLocation(''); setFilterDiscipline(''); setCandidatePage(1) }}>
                   Clear
                 </button>
               )}
@@ -358,7 +413,8 @@ export default function Matching() {
           </div>
 
           {/* Candidate cards */}
-          {filtered.map((c, rank) => {
+          {pagedFiltered.map((c, i) => {
+            const rank = (Math.min(candidatePage, Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))) - 1) * PAGE_SIZE + i
             const isExpanded = expandedId === c.id
             const isAssigned = assignedIds.includes(c.id)
             const passCount = c.reasons.filter(r => r.pass).length
@@ -427,7 +483,7 @@ export default function Matching() {
                         <div>
                           <p style={{ margin: '0 0 0.3rem', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Certificates</p>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.2rem' }}>
-                            {c.certificates.map(cert => (
+                            {(c.certificates ?? []).map(cert => (
                               <span key={cert} style={{ padding: '0.12rem 0.4rem', background: '#fdfaf3', border: '1px solid #e9d98a', borderRadius: '0.25rem', fontSize: '0.7rem', fontWeight: 600, color: '#92400e' }}>{cert}</span>
                             ))}
                           </div>
@@ -474,9 +530,15 @@ export default function Matching() {
 
           {filtered.length === 0 && (
             <div className="card" style={{ padding: '2.5rem', textAlign: 'center' }}>
-              <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>No candidates match the current filters.</p>
+              <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>
+                {candidates.length === 0
+                  ? 'No candidates in the system yet — once candidates are added, they\'ll be ranked here against this project\'s open positions.'
+                  : 'No candidates match the current filters.'}
+              </p>
             </div>
           )}
+
+          <Pagination page={candidatePage} setPage={setCandidatePage} total={filtered.length} />
         </div>
       </div>
     </div>

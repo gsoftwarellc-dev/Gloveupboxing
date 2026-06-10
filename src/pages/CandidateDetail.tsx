@@ -156,7 +156,7 @@ export default function CandidateDetail() {
                 </div>
               ))}
             </div>
-            {c.skills?.length > 0 && (
+            {c.skills && c.skills.length > 0 && (
               <>
                 <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Skills</p>
                 <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -290,7 +290,7 @@ export default function CandidateDetail() {
               <button className="btn-ghost" style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem' }}><Plus size={11} />Add</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {(c.references || []).map((r: { name: string; role: string; status: string }) => (
+              {((c as any).references || []).map((r: { name: string; role: string; status: string }) => (
                 <div key={r.name} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}>
                   <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <User size={13} style={{ color: '#9ca3af' }} />
@@ -302,7 +302,7 @@ export default function CandidateDetail() {
                   <span className={`badge ${r.status === 'obtained' ? 'badge-green' : 'badge-yellow'}`} style={{ fontSize: '0.7rem' }}>{r.status}</span>
                 </div>
               ))}
-              {(!c.references || c.references.length === 0) && (
+              {(!(c as any).references || (c as any).references.length === 0) && (
                 <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>No references added.</p>
               )}
             </div>

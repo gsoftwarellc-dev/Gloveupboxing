@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Plus, Search, MapPin, Download, SlidersHorizontal, Globe, Lock, Eye, EyeOff, Briefcase } from 'lucide-react'
-import { vacancies as initialVacancies, pipelineStages } from '../data/mock'
+import { vacancies as initialVacancies, pipelineStages, clients as mockClients, projects as mockProjects } from '../data/mock'
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   active:    { label: 'Active',   cls: 'badge-green' },
@@ -14,6 +14,8 @@ const disciplineColors: Record<string, string> = {
   Civil: '#3b82f6', Structural: '#8b5cf6', Groundworks: '#f59e0b',
   MEP: '#14b8a6', Commercial: '#f97316', 'H&S': '#ef4444',
 }
+
+const disciplines = ['All', ...Array.from(new Set(initialVacancies.map(v => v.discipline))).filter(Boolean)]
 
 export default function Vacancies() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -98,7 +100,7 @@ export default function Vacancies() {
           </select>
           <select className="input" style={{ width: 'auto', fontSize: '0.82rem' }} value={disciplineFilter} onChange={e => setDisciplineFilter(e.target.value)}>
             <option value="All">All Disciplines</option>
-            {['Civil', 'Structural', 'Groundworks', 'MEP', 'Commercial', 'H&S'].map(d => <option key={d}>{d}</option>)}
+            {disciplines.filter(d => d !== 'All').map(d => <option key={d}>{d}</option>)}
           </select>
           <button className="btn-secondary" style={{ fontSize: '0.82rem' }}><SlidersHorizontal size={14} />More</button>
           <div style={{ display: 'flex', gap: '2px', marginLeft: 'auto', background: '#f3f4f6', borderRadius: '0.5rem', padding: '2px' }}>
@@ -315,15 +317,22 @@ function AddVacancyModal({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Client *</label>
-            <select className="input" style={{ fontSize: '0.82rem' }}><option>Balfour Beatty</option><option>Mace Group</option><option>Skanska UK</option><option>Costain Ltd</option><option>Arup</option><option>Kier Group</option></select>
+            <select className="input" style={{ fontSize: '0.82rem' }}>
+              {mockClients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Linked Project</label>
-            <select className="input" style={{ fontSize: '0.82rem' }}><option value="">— None —</option><option>Manchester Victoria Gateway</option><option>London Bridge Residential</option><option>Birmingham Metro Extension</option><option>Glasgow City Centre Regen</option></select>
+            <select className="input" style={{ fontSize: '0.82rem' }}>
+              <option value="">— None —</option>
+              {mockProjects.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Discipline *</label>
-            <select className="input" style={{ fontSize: '0.82rem' }}><option>Civil</option><option>Structural</option><option>Groundworks</option><option>MEP</option><option>Commercial</option><option>H&S</option></select>
+            <select className="input" style={{ fontSize: '0.82rem' }}>
+              {disciplines.filter(d => d !== 'All').map(d => <option key={d}>{d}</option>)}
+            </select>
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Employment Type *</label>

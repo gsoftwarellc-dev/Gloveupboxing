@@ -1,326 +1,219 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts'
-import {
-  Download, Users, FileText, CalendarCheck, Trophy
-} from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Banknote, Briefcase, TrendingUp, Building2 } from 'lucide-react'
+import { projects } from '../data/mock'
 
-// ── Mock Data ──────────────────────────────────────────────────────────────
-
-const placementsOverTime = [
-  { month: 'Jan', placements: 4, cvsSent: 18 },
-  { month: 'Feb', placements: 6, cvsSent: 24 },
-  { month: 'Mar', placements: 5, cvsSent: 21 },
-  { month: 'Apr', placements: 9, cvsSent: 32 },
-  { month: 'May', placements: 7, cvsSent: 28 },
-  { month: 'Jun', placements: 12, cvsSent: 41 },
-]
-
-const funnelData = [
-  { stage: 'Applications', count: 84 },
-  { stage: 'Screening', count: 56 },
-  { stage: 'Shortlisted', count: 34 },
-  { stage: 'Contacted', count: 28 },
-  { stage: 'CV Sent', count: 22 },
-  { stage: 'Interview', count: 14 },
-  { stage: 'Offer', count: 8 },
-  { stage: 'Placed', count: 6 },
-]
-
-const activityData = [
-  { name: 'Calls', value: 142, color: '#b8942e' },
-  { name: 'Emails', value: 98, color: '#3b82f6' },
-  { name: 'Notes', value: 67, color: '#22c55e' },
-  { name: 'Interviews', value: 31, color: '#a855f7' },
-  { name: 'Submissions', value: 44, color: '#f97316' },
-]
-
-
-const vacancyPerf = [
-  { vacancy: 'Senior Site Manager', client: 'Balfour Beatty', applications: 18, shortlisted: 7, cvsSent: 5, interviews: 3, status: 'active' },
-  { vacancy: 'Structural Engineer', client: 'Arup', applications: 14, shortlisted: 6, cvsSent: 4, interviews: 2, status: 'active' },
-  { vacancy: 'Project Manager', client: 'Mace Group', applications: 22, shortlisted: 9, cvsSent: 6, interviews: 4, status: 'active' },
-  { vacancy: 'Groundworks Foreman', client: 'Costain Ltd', applications: 11, shortlisted: 4, cvsSent: 3, interviews: 2, status: 'filled' },
-  { vacancy: 'MEP Coordinator', client: 'Skanska UK', applications: 9, shortlisted: 3, cvsSent: 2, interviews: 1, status: 'active' },
-  { vacancy: 'Quantity Surveyor', client: 'Kier Group', applications: 10, shortlisted: 5, cvsSent: 2, interviews: 2, status: 'on-hold' },
-]
-
-const statusBadge: Record<string, string> = {
-  active: 'badge-green',
-  filled: 'badge-blue',
-  'on-hold': 'badge-yellow',
-  closed: 'badge-red',
-}
-const statusLabel: Record<string, string> = {
-  active: 'Active',
-  filled: 'Filled',
-  'on-hold': 'On Hold',
-  closed: 'Closed',
+// Parse "£20m" / "£8.3m (Est)" style values into millions
+function parseValueMillions(value: string | number): number {
+  if (typeof value === 'number') return value
+  const match = value.match(/£?([\d.]+)\s*m/i)
+  return match ? parseFloat(match[1]) : 0
 }
 
-const TOOLTIP_STYLE = {
+const totalPipelineValue = projects.reduce((sum, p) => sum + parseValueMillions(p.value), 0)
+const totalRolesNeeded = projects.reduce((sum, p) => sum + (p.rolesNeeded ?? 0), 0)
+const avgOpportunityScore = projects.length
+  ? Math.round(projects.reduce((sum, p) => sum + (p.opportunityScore ?? 0), 0) / projects.length)
+  : 0
+
+// Pipeline value by sector
+const colors = ['#b8942e', '#d4af5a', '#8a6e1e', '#6b5218', '#3b82f6', '#10b981', '#ef4444', '#94a3b8', '#c084fc', '#60a5fa']
+const valueBySectorMap = projects.reduce<Record<string, number>>((acc, p) => {
+  const s = p.sector ?? 'Other'
+  acc[s] = (acc[s] ?? 0) + parseValueMillions(p.value)
+  return acc
+}, {})
+const valueBySector = Object.entries(valueBySectorMap)
+  .map(([name, value], i) => ({ name, value: Math.round(value * 10) / 10, color: colors[i % colors.length] }))
+  .sort((a, b) => b.value - a.value)
+  .slice(0, 8)
+
+// Roles needed by stage
+const stageOrder = ['Pipeline', 'Tender', 'Pre-Construction', 'Mobilising', 'On Site']
+const rolesByStage = stageOrder.map(stage => ({
+  stage,
+  roles: projects.filter(p => p.stage === stage).reduce((sum, p) => sum + (p.rolesNeeded ?? 0), 0),
+}))
+
+// Top main contractors by number of associated projects
+const contractorCounts = projects.reduce<Record<string, number>>((acc, p) => {
+  const c = p.mainContractor
+  if (!c) return acc
+  acc[c] = (acc[c] ?? 0) + 1
+  return acc
+}, {})
+const topContractors = Object.entries(contractorCounts)
+  .map(([name, count]) => ({ name, count }))
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 6)
+
+// Highest opportunity-score projects
+const topOpportunities = [...projects]
+  .sort((a, b) => (b.opportunityScore ?? 0) - (a.opportunityScore ?? 0))
+  .slice(0, 8)
+
+const TooltipStyle = {
   backgroundColor: '#ffffff',
   border: '1px solid #e5e7eb',
   borderRadius: '8px',
   color: '#000000',
-  fontSize: '0.875rem',
+  fontSize: '1.05rem',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
 }
 
-// ── Custom Tooltip ──────────────────────────────────────────────────────────
-
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null
+function KpiCard({ icon: Icon, label, value, color }: any) {
   return (
-    <div style={{ ...TOOLTIP_STYLE, padding: '0.6rem 0.875rem' }}>
-      <p style={{ fontWeight: 700, marginBottom: '0.25rem', color: '#000000' }}>{label}</p>
-      {payload.map((p: any) => (
-        <p key={p.dataKey} style={{ color: p.color, margin: '0.15rem 0', fontWeight: 600 }}>
-          {p.name}: {p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
-
-// ── Subcomponents ───────────────────────────────────────────────────────────
-
-function KpiCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: string | number; color: string }) {
-  return (
-    <div className="stat-card">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <p className="stat-label">{label}</p>
-        <div style={{ width: 36, height: 36, borderRadius: '0.5rem', background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={16} style={{ color }} />
-        </div>
+    <div className="card" style={{ padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div style={{
+        width: 44, height: 44, borderRadius: '0.625rem', flexShrink: 0,
+        background: `${color}15`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        <Icon size={20} style={{ color }} />
       </div>
-      <p className="stat-value">{value}</p>
+      <div>
+        <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280', fontWeight: 500 }}>{label}</p>
+        <p style={{ margin: '0.2rem 0 0', fontSize: '1.35rem', fontWeight: 700, color: '#111', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</p>
+      </div>
     </div>
   )
 }
 
-// ── Main Component ──────────────────────────────────────────────────────────
+function scoreColor(score: number) {
+  if (score >= 80) return '#10b981'
+  if (score >= 60) return '#b8942e'
+  if (score >= 40) return '#f97316'
+  return '#ef4444'
+}
 
 export default function Reports() {
-  const [dateRange, setDateRange] = useState('This Month')
-  const [recruiterFilter, setRecruiterFilter] = useState('All Recruiters')
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 className="page-title">Reports &amp; Analytics</h1>
-          <p style={{ color: '#6b7280', fontSize: '0.9rem', marginTop: '0.25rem', fontWeight: 500 }}>
-            Recruiter performance, placement trends, and pipeline conversion
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* Date range */}
-          <div style={{ position: 'relative' }}>
-            <select
-              className="input"
-              style={{ width: 'auto', paddingRight: '2.25rem', fontWeight: 600 }}
-              value={dateRange}
-              onChange={e => setDateRange(e.target.value)}
-            >
-              <option>This Week</option>
-              <option>This Month</option>
-              <option>This Quarter</option>
-              <option>This Year</option>
-            </select>
-          </div>
-          {/* Recruiter filter */}
-          <div style={{ position: 'relative' }}>
-            <select
-              className="input"
-              style={{ width: 'auto', paddingRight: '2.25rem', fontWeight: 600 }}
-              value={recruiterFilter}
-              onChange={e => setRecruiterFilter(e.target.value)}
-            >
-              <option>All Recruiters</option>
-              <option>Tom Bradley</option>
-              <option>Emma Clarke</option>
-              <option>Mark Richards</option>
-              <option>Priya Sharma</option>
-            </select>
-          </div>
-          <button className="btn-primary">
-            <Download size={14} /> Export
-          </button>
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="page-title">Reports & Analytics</h1>
+        <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
+          Pipeline value, opportunity scoring, and contractor relationships across the project portfolio
+        </p>
       </div>
 
-      {/* ── KPI Summary Row ─────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
-        <KpiCard icon={Users} label="Candidates Added" value={100} color="#b8942e" />
-        <KpiCard icon={FileText} label="CVs Sent" value={61} color="#22c55e" />
-        <KpiCard icon={CalendarCheck} label="Interviews Arranged" value={34} color="#a855f7" />
-        <KpiCard icon={Trophy} label="Placements" value={34} color="#b8942e" />
+      {/* KPI cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+        <KpiCard icon={Banknote} label="Total Pipeline Value" value={`£${totalPipelineValue.toFixed(0)}m+`} color="#fbbf24" />
+        <KpiCard icon={Briefcase} label="Roles Needed" value={totalRolesNeeded} color="#60a5fa" />
+        <KpiCard icon={TrendingUp} label="Avg Opportunity Score" value={`${avgOpportunityScore}/100`} color="#10b981" />
+        <KpiCard icon={Building2} label="Main Contractors Tracked" value={Object.keys(contractorCounts).length} color="#b8942e" />
       </div>
 
-      {/* ── Charts Row ──────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-
-        {/* Placements Over Time */}
+      {/* Charts row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+        {/* Pipeline value by sector */}
         <div className="card">
-          <p className="section-title" style={{ marginBottom: '1.25rem' }}>Placements Over Time</p>
-          <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={placementsOverTime} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gradPlacements" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#b8942e" stopOpacity={0.22} />
-                  <stop offset="95%" stopColor="#b8942e" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradCvs" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+          <h2 className="section-title" style={{ marginBottom: '1.25rem' }}>Pipeline Value by Sector (£m)</h2>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={valueBySector}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f5" />
-              <XAxis dataKey="month" tick={{ fill: '#000000', fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#000000', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: '0.82rem', fontWeight: 600, color: '#000000' }} />
-              <Area type="monotone" dataKey="placements" name="Placements" stroke="#b8942e" strokeWidth={2.5} fill="url(#gradPlacements)" dot={{ fill: '#b8942e', r: 3 }} activeDot={{ r: 5 }} />
-              <Area type="monotone" dataKey="cvsSent" name="CVs Sent" stroke="#3b82f6" strokeWidth={2} fill="url(#gradCvs)" dot={{ fill: '#3b82f6', r: 3 }} activeDot={{ r: 5 }} />
-            </AreaChart>
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#000000' }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={60} interval={0} />
+              <YAxis tick={{ fontSize: 11, fill: '#000000' }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={TooltipStyle} formatter={(v: any) => [`£${v}m`, 'Value']} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                {valueBySector.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Activity by Type */}
+        {/* Roles needed by stage */}
         <div className="card">
-          <p className="section-title" style={{ marginBottom: '1.25rem' }}>Activity by Type</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ flex: '0 0 220px' }}>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie
-                    data={activityData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={95}
-                    dataKey="value"
-                    paddingAngle={3}
-                  >
-                    {activityData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={TOOLTIP_STYLE}
-                    formatter={(v: any, name: any) => [v, name]}
-                    labelStyle={{ color: '#000000', fontWeight: 700 }}
-                    itemStyle={{ color: '#000000' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-              {activityData.map(d => (
-                <div key={d.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: d.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#000000' }}>{d.name}</span>
-                  </div>
-                  <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#000000' }}>{d.value}</span>
+          <h2 className="section-title" style={{ marginBottom: '1.25rem' }}>Roles Needed by Stage</h2>
+          <ResponsiveContainer width="100%" height={170}>
+            <PieChart>
+              <Pie data={rolesByStage.filter(r => r.roles > 0)} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="roles" nameKey="stage" paddingAngle={3}>
+                {rolesByStage.map((_, i) => (
+                  <Cell key={i} fill={colors[i % colors.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={TooltipStyle} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.75rem' }}>
+            {rolesByStage.map((s, i) => (
+              <div key={s.stage} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: colors[i % colors.length], display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ color: '#000000' }}>{s.stage}</span>
                 </div>
-              ))}
-              <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#000000' }}>Total</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#b8942e' }}>
-                  {activityData.reduce((s, d) => s + d.value, 0)}
-                </span>
+                <span style={{ color: '#000000' }}>{s.roles}</span>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* ── Pipeline Conversion Funnel ───────────────────────────────────── */}
-      <div className="card">
-        <p className="section-title" style={{ marginBottom: '1.25rem' }}>Pipeline Conversion Funnel</p>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={funnelData} margin={{ top: 4, right: 16, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f5" vertical={false} />
-            <XAxis dataKey="stage" tick={{ fill: '#000000', fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#000000', fontSize: 12 }} axisLine={false} tickLine={false} />
-            <Tooltip
-              contentStyle={TOOLTIP_STYLE}
-              labelStyle={{ color: '#000000', fontWeight: 700 }}
-              itemStyle={{ color: '#000000' }}
-              formatter={(v: any) => [v, 'Candidates']}
-            />
-            <Bar dataKey="count" name="Candidates" radius={[6, 6, 0, 0]}>
-              {funnelData.map((_, i) => {
-                const opacity = 1 - (i / funnelData.length) * 0.55
-                return <Cell key={i} fill={`rgba(184, 148, 46, ${opacity})`} />
-              })}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-        {/* Conversion rates row */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-          {funnelData.map((d, i) => {
-            if (i === 0) return null
-            const rate = Math.round((d.count / funnelData[i - 1].count) * 100)
-            return (
-              <div key={d.stage} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem', color: '#6b7280', fontWeight: 600 }}>
-                <span style={{ color: '#b8942e', fontWeight: 800 }}>{rate}%</span>
-                <span>{funnelData[i - 1].stage}→{d.stage}</span>
-                {i < funnelData.length - 1 && <span style={{ color: '#d1d5db', marginLeft: '0.25rem' }}>·</span>}
-              </div>
-            )
-          })}
+      {/* Bottom row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        {/* Top contractors */}
+        <div className="card">
+          <h2 className="section-title" style={{ marginBottom: '1.25rem' }}>Top Main Contractors by Project Count</h2>
+          {topContractors.length === 0 ? (
+            <p style={{ color: '#9ca3af', fontSize: '0.85rem', margin: 0 }}>No main contractor data on file.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={topContractors} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f5" horizontal={false} />
+                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: '#000000' }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#000000' }} axisLine={false} tickLine={false} width={140} />
+                <Tooltip contentStyle={TooltipStyle} />
+                <Bar dataKey="count" fill="#60a5fa" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Top opportunities table */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <h2 className="section-title">Top Opportunities</h2>
+            <Link to="/projects" style={{ fontSize: '0.82rem', color: '#b8942e', textDecoration: 'none' }}>View all</Link>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {topOpportunities.map(p => (
+              <Link
+                key={p.id}
+                to={`/projects/${p.id}`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '0.6rem 0.875rem',
+                  background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.5rem',
+                  textDecoration: 'none'
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#111', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280', marginTop: '0.1rem' }}>{p.client} · {typeof p.value === 'string' ? p.value : `£${p.value}m`}</p>
+                </div>
+                <span
+                  className="badge"
+                  style={{
+                    fontSize: '0.72rem',
+                    background: `${scoreColor(p.opportunityScore ?? 0)}15`,
+                    color: scoreColor(p.opportunityScore ?? 0),
+                    border: `1px solid ${scoreColor(p.opportunityScore ?? 0)}30`,
+                    flexShrink: 0,
+                  }}
+                >
+                  {p.opportunityScore ?? 0}/100
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
-
-      {/* ── Vacancy Performance Table ─────────────────────────────────────── */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '1.25rem 1.25rem 1rem', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <p className="section-title">Vacancy Performance</p>
-          <Link to="/vacancies" className="btn-ghost" style={{ fontSize: '0.85rem' }}>View All Vacancies</Link>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Vacancy</th>
-                <th>Client</th>
-                <th>Applications</th>
-                <th>Shortlisted</th>
-                <th>CVs Sent</th>
-                <th>Interviews</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vacancyPerf.map(v => (
-                <tr key={v.vacancy}>
-                  <td style={{ fontWeight: 700 }}>{v.vacancy}</td>
-                  <td style={{ color: '#374151' }}>{v.client}</td>
-                  <td>
-                    <span style={{ fontWeight: 700 }}>{v.applications}</span>
-                  </td>
-                  <td>{v.shortlisted}</td>
-                  <td>{v.cvsSent}</td>
-                  <td>{v.interviews}</td>
-                  <td>
-                    <span className={`badge ${statusBadge[v.status]}`}>
-                      {statusLabel[v.status]}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
     </div>
   )
 }

@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Plus, Search, Download, MapPin, Phone, Mail, Star, SlidersHorizontal, CheckCircle, Briefcase, Building2, Calendar, X } from 'lucide-react'
+import { Plus, Search, Download, MapPin, Phone, Mail, Star, SlidersHorizontal, CheckCircle, Briefcase, Building2, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { candidates as initialCandidates, clients, vacancies } from '../data/mock'
+
+const PAGE_SIZE = 20
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   available:       { label: 'Available',     cls: 'badge-green' },
@@ -12,7 +14,7 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
   qualified:       { label: 'Ready to Work', cls: 'badge-gold' },
 }
 
-const disciplines = ['All', 'Civil', 'Structural', 'Groundworks', 'MEP', 'Commercial', 'H&S']
+const disciplines = ['All', ...Array.from(new Set(initialCandidates.map(c => c.discipline))).filter(Boolean)]
 
 const poolTabs = [
   { key: 'all',       label: 'All Candidates' },
@@ -35,9 +37,10 @@ export default function Candidates() {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
   const [showAddModal, setShowAddModal] = useState(false)
   const [assignModal, setAssignModal] = useState<number | null>(null)
-  const [assignClientId, setAssignClientId] = useState(clients[0].id)
-  const [assignVacancyId, setAssignVacancyId] = useState(vacancies[0].id)
+  const [assignClientId, setAssignClientId] = useState(clients[0]?.id ?? 0)
+  const [assignVacancyId, setAssignVacancyId] = useState(vacancies[0]?.id ?? 0)
   const [assignStartDate, setAssignStartDate] = useState('2025-07-01')
+  const [page, setPage] = useState(1)
 
   const poolTab = searchParams.get('pool') ?? 'all'
 
@@ -48,6 +51,7 @@ export default function Candidates() {
       else next.set('pool', key)
       return next
     })
+    setPage(1)
   }
 
 
@@ -82,6 +86,49 @@ export default function Candidates() {
   })
 
   const assignCandidate = assignModal ? candidates.find(c => c.id === assignModal) : null
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  function Pagination() {
+    if (totalPages <= 1) return null
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>
+          Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <button
+            className="btn-secondary"
+            style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
+            disabled={currentPage === 1}
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+          >
+            <ChevronLeft size={12} />
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+            <button
+              key={n}
+              className={n === currentPage ? 'btn-primary' : 'btn-secondary'}
+              style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem', minWidth: '2.25rem' }}
+              onClick={() => setPage(n)}
+            >
+              {n}
+            </button>
+          ))}
+          <button
+            className="btn-secondary"
+            style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
+            disabled={currentPage === totalPages}
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          >
+            <ChevronRight size={12} />
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -146,7 +193,7 @@ export default function Candidates() {
               No qualified candidates yet. Mark candidates as qualified from the All Candidates tab.
             </div>
           )}
-          {filtered.map(c => (
+          {paged.map(c => (
             <div key={c.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.25rem' }}>
               {/* Avatar */}
               <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b8942e', fontWeight: 700, fontSize: '0.75rem', flexShrink: 0 }}>
@@ -177,13 +224,14 @@ export default function Candidates() {
                 <button
                   className="btn-primary"
                   style={{ fontSize: '0.78rem' }}
-                  onClick={() => { setAssignModal(c.id); setAssignClientId(clients[0].id); setAssignVacancyId(vacancies[0].id) }}
+                  onClick={() => { setAssignModal(c.id); setAssignClientId(clients[0]?.id ?? 0); setAssignVacancyId(vacancies[0]?.id ?? 0) }}
                 >
                   <Briefcase size={13} />Assign to Company
                 </button>
               </div>
             </div>
           ))}
+          <Pagination />
         </div>
       )}
 
@@ -195,7 +243,7 @@ export default function Candidates() {
               No candidates assigned yet. Assign candidates from the Ready to Work tab.
             </div>
           )}
-          {filtered.map(c => {
+          {paged.map(c => {
             const a = getAssignment(c.id)
             const assignedClient = a ? clients.find(cl => cl.id === a.clientId) : null
             const assignedVacancy = a ? vacancies.find(v => v.id === a.vacancyId) : null
@@ -238,6 +286,7 @@ export default function Candidates() {
               </div>
             )
           })}
+          <Pagination />
         </div>
       )}
 
@@ -249,12 +298,12 @@ export default function Candidates() {
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <div className="search-bar" style={{ flex: 1, minWidth: 200 }}>
                 <Search size={14} />
-                <input className="input" placeholder="Search name, role, location..." value={search} onChange={e => setSearch(e.target.value)} />
+                <input className="input" placeholder="Search name, role, location..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
               </div>
-              <select className="input" style={{ width: 'auto', fontSize: '0.82rem' }} value={discipline} onChange={e => setDiscipline(e.target.value)}>
+              <select className="input" style={{ width: 'auto', fontSize: '0.82rem' }} value={discipline} onChange={e => { setDiscipline(e.target.value); setPage(1) }}>
                 {disciplines.map(d => <option key={d}>{d}</option>)}
               </select>
-              <select className="input" style={{ width: 'auto', fontSize: '0.82rem' }} value={status} onChange={e => setStatus(e.target.value)}>
+              <select className="input" style={{ width: 'auto', fontSize: '0.82rem' }} value={status} onChange={e => { setStatus(e.target.value); setPage(1) }}>
                 <option value="All">All Status</option>
                 {Object.entries(statusConfig).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
               </select>
@@ -281,7 +330,7 @@ export default function Candidates() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map(c => (
+                    {paged.map(c => (
                       <tr key={c.id}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -318,17 +367,14 @@ export default function Candidates() {
                   </tbody>
                 </table>
               </div>
-              <div style={{ padding: '0.875rem 1rem', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>Showing {filtered.length} of {candidates.length} candidates</span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.82rem' }}>Previous</button>
-                  <button className="btn-primary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.82rem' }}>Next</button>
-                </div>
+              <div style={{ padding: '0.875rem 1rem', borderTop: '1px solid #f1f5f9' }}>
+                <Pagination />
               </div>
             </div>
           ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-              {filtered.map(c => (
+              {paged.map(c => (
                 <div key={c.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -361,6 +407,8 @@ export default function Candidates() {
                   </div>
                 </div>
               ))}
+            </div>
+            <Pagination />
             </div>
           )}
         </>

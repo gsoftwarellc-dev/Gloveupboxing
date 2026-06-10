@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, MapPin, Calendar, Users, ChevronRight } from 'lucide-react'
+import { Plus, Search, MapPin, Calendar, Users, ChevronRight, ChevronLeft } from 'lucide-react'
 import { projects } from '../data/mock'
+
+const PAGE_SIZE = 20
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   active:  { label: 'Active',  cls: 'badge-green' },
@@ -10,17 +12,67 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
   paused:  { label: 'Paused',  cls: 'badge-gray' },
 }
 
+type SortKey = 'score' | 'priority' | 'value' | 'name'
+
+const priorityRank: Record<string, number> = {
+  'Priority 1': 1, 'Priority 1+': 0, 'Priority 2': 2, 'Priority 3': 3, 'Priority 4': 4,
+}
+
+function valueToMillions(v: string | number): number {
+  const m = String(v).match(/£\s*([\d,.]+)\s*(bn|m|k)?/i)
+  if (!m) return 0
+  let num = parseFloat(m[1].replace(/,/g, ''))
+  const unit = (m[2] || '').toLowerCase()
+  if (unit === 'bn') num *= 1000
+  else if (unit === 'k') num /= 1000
+  return num
+}
+
 export default function Projects() {
   const [search, setSearch] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [page, setPage] = useState(1)
+  const [sortBy, setSortBy] = useState<SortKey>('score')
 
-  const filtered = projects.filter(p => {
-    const q = search.toLowerCase()
-    return p.name.toLowerCase().includes(q) || p.client.toLowerCase().includes(q) || p.location.toLowerCase().includes(q)
-  })
+  const filtered = projects
+    .filter(p => {
+      const q = search.toLowerCase()
+      return p.name.toLowerCase().includes(q) || p.client.toLowerCase().includes(q) || p.location.toLowerCase().includes(q)
+    })
+    .slice()
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'score':
+          return b.opportunityScore - a.opportunityScore
+        case 'priority':
+          return (priorityRank[a.priority ?? ''] ?? 99) - (priorityRank[b.priority ?? ''] ?? 99)
+        case 'value':
+          return valueToMillions(b.value) - valueToMillions(a.value)
+        case 'name':
+          return a.name.localeCompare(b.name)
+        default:
+          return 0
+      }
+    })
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
   const totalRoles = projects.reduce((a, p) => a + p.rolesNeeded, 0)
   const activeCount = projects.filter(p => p.status === 'active').length
+
+  const totalValueM = projects.reduce((sum, p) => {
+    const v = String(p.value)
+    const m = v.match(/£\s*([\d,.]+)\s*(bn|m|k)?/i)
+    if (!m) return sum
+    let num = parseFloat(m[1].replace(/,/g, ''))
+    const unit = (m[2] || '').toLowerCase()
+    if (unit === 'bn') num *= 1000
+    else if (unit === 'k') num /= 1000
+    return sum + num
+  }, 0)
+  const totalValueLabel = totalValueM >= 1000 ? `£${(totalValueM / 1000).toFixed(1)}bn+` : `£${Math.round(totalValueM)}m+`
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -39,7 +91,7 @@ export default function Projects() {
         {[
           { label: 'Total Projects', value: projects.length },
           { label: 'Active', value: activeCount },
-          { label: 'Total Value', value: '£450M+' },
+          { label: 'Total Value', value: totalValueLabel },
           { label: 'Roles Identified', value: totalRoles },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '1.1rem 1.25rem' }}>
@@ -49,21 +101,34 @@ export default function Projects() {
         ))}
       </div>
 
-      {/* Search */}
-      <div style={{ position: 'relative' }}>
-        <Search size={14} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
-        <input
+      {/* Search + Sort */}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: '1 1 240px' }}>
+          <Search size={14} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+          <input
+            className="input"
+            style={{ paddingLeft: '2.25rem', fontSize: '0.9rem' }}
+            placeholder="Search projects, clients, locations..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1) }}
+          />
+        </div>
+        <select
           className="input"
-          style={{ paddingLeft: '2.25rem', fontSize: '0.9rem' }}
-          placeholder="Search projects, clients, locations..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+          style={{ fontSize: '0.9rem', width: 'auto', minWidth: 200 }}
+          value={sortBy}
+          onChange={e => { setSortBy(e.target.value as SortKey); setPage(1) }}
+        >
+          <option value="score">Sort: Opportunity Score (High → Low)</option>
+          <option value="priority">Sort: Priority (1 → 4)</option>
+          <option value="value">Sort: Contract Value (High → Low)</option>
+          <option value="name">Sort: Name (A → Z)</option>
+        </select>
       </div>
 
       {/* Projects table-style list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {filtered.map(p => {
+        {paged.map(p => {
           const scoreColor = p.opportunityScore >= 80 ? '#15803d' : p.opportunityScore >= 60 ? '#b8942e' : '#b91c1c'
           const scoreBg = p.opportunityScore >= 80 ? '#f0fdf4' : p.opportunityScore >= 60 ? '#fefce8' : '#fef2f2'
           return (
@@ -84,6 +149,7 @@ export default function Projects() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111' }}>{p.name}</span>
                   <span className={`badge ${statusConfig[p.status]?.cls || 'badge-gray'}`}>{statusConfig[p.status]?.label || p.status}</span>
+                  {p.priority && <span className="badge badge-gray">{p.priority}</span>}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: '#b8942e', fontWeight: 600, marginTop: '0.15rem' }}>{p.client}</div>
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
@@ -91,7 +157,7 @@ export default function Projects() {
                     <MapPin size={11} />{p.location}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem', color: '#6b7280' }}>
-                    <Calendar size={11} />{p.startDate} – {p.endDate}
+                    <Calendar size={11} />Start: {p.startDate || 'TBC'}
                   </span>
                 </div>
               </div>
@@ -112,7 +178,7 @@ export default function Projects() {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 500, marginBottom: '0.15rem' }}>Contacts</div>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>{p.contacts}</div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#374151' }}>{Array.isArray(p.contacts) ? p.contacts.length : p.contacts}</div>
                 </div>
               </div>
 
@@ -129,6 +195,43 @@ export default function Projects() {
           )
         })}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} projects
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <button
+              className="btn-secondary"
+              style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
+              disabled={currentPage === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+              <ChevronLeft size={12} />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+              <button
+                key={n}
+                className={n === currentPage ? 'btn-primary' : 'btn-secondary'}
+                style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem', minWidth: '2.25rem' }}
+                onClick={() => setPage(n)}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              className="btn-secondary"
+              style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
+              disabled={currentPage === totalPages}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            >
+              <ChevronRight size={12} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {showAddModal && <AddProjectModal onClose={() => setShowAddModal(false)} />}
     </div>
