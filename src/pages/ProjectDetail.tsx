@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeft, Edit, Plus, MapPin, Calendar, Building2, Users,
-  Phone, Mail, Star, X, Search
+  Phone, Mail, Star, X, Search, AlertCircle, CheckCircle2, ArrowRight
 } from 'lucide-react'
 import { candidates as allCandidates, projects as mockProjects } from '../data/mock'
 import { findRelatedClients } from '../utils/clientMatching'
@@ -100,6 +100,42 @@ export default function ProjectDetail() {
   const scoreColor = project.opportunityScore >= 80 ? '#15803d' : project.opportunityScore >= 60 ? '#b8942e' : '#b91c1c'
   const scoreBg = project.opportunityScore >= 80 ? '#f0fdf4' : project.opportunityScore >= 60 ? '#fefce8' : '#fef2f2'
 
+  // Next-action banner: surface the single most important thing to do on this project
+  type NextAction = { tone: 'urgent' | 'warning' | 'done'; title: string; body: string; ctaLabel: string; onClick: () => void }
+  let nextAction: NextAction | null = null
+  if (contacts.length === 0) {
+    nextAction = {
+      tone: 'urgent',
+      title: 'No client contacts on file',
+      body: `Add the people at ${project.client}${project.mainContractor ? ` or ${project.mainContractor}` : ''} you need to reach out to before recruitment can start.`,
+      ctaLabel: 'Add Contact',
+      onClick: () => document.getElementById('key-contacts')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    }
+  } else if (rolesNeeded > 0 && assignedCandidates.length < rolesNeeded) {
+    const remaining = rolesNeeded - assignedCandidates.length
+    nextAction = {
+      tone: 'warning',
+      title: `${remaining} role${remaining === 1 ? '' : 's'} still need${remaining === 1 ? 's' : ''} a candidate`,
+      body: `${assignedCandidates.length} of ${rolesNeeded} roles filled. Assign candidates from your Ready to Work pool to keep this project moving.`,
+      ctaLabel: 'Assign Candidate',
+      onClick: () => openModal(),
+    }
+  } else if (rolesNeeded > 0) {
+    nextAction = {
+      tone: 'done',
+      title: 'Fully staffed',
+      body: `All ${rolesNeeded} role${rolesNeeded === 1 ? '' : 's'} on this project have an assigned candidate.`,
+      ctaLabel: 'View Assigned',
+      onClick: () => document.getElementById('assigned-candidates')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    }
+  }
+
+  const actionStyles: Record<NextAction['tone'], { bg: string; border: string; iconColor: string; icon: typeof AlertCircle }> = {
+    urgent:  { bg: '#fef2f2', border: '#fca5a5', iconColor: '#ef4444', icon: AlertCircle },
+    warning: { bg: '#fefce8', border: '#e9d98a', iconColor: '#b8942e', icon: AlertCircle },
+    done:    { bg: '#f0fdf4', border: '#bbf7d0', iconColor: '#15803d', icon: CheckCircle2 },
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
@@ -161,6 +197,27 @@ export default function ProjectDetail() {
         </div>
       </div>
 
+      {/* Next Action banner */}
+      {nextAction && (() => {
+        const style = actionStyles[nextAction.tone]
+        const Icon = style.icon
+        return (
+          <div className="card" style={{
+            padding: '1rem 1.25rem', background: style.bg, border: `1px solid ${style.border}`,
+            display: 'flex', alignItems: 'center', gap: '0.875rem', flexWrap: 'wrap'
+          }}>
+            <Icon size={22} style={{ color: style.iconColor, flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111' }}>{nextAction.title}</div>
+              <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.15rem' }}>{nextAction.body}</div>
+            </div>
+            <button className="btn-primary" style={{ fontSize: '0.82rem', flexShrink: 0 }} onClick={nextAction.onClick}>
+              {nextAction.ctaLabel}<ArrowRight size={13} />
+            </button>
+          </div>
+        )
+      })()}
+
       {/* Body */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.25rem', alignItems: 'start' }}>
 
@@ -178,7 +235,7 @@ export default function ProjectDetail() {
           )}
 
           {/* Key Contacts */}
-          <div className="card" style={{ padding: '1.25rem' }}>
+          <div id="key-contacts" className="card" style={{ padding: '1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
               <SectionLabel>Key Contacts ({contacts.length})</SectionLabel>
               <button className="btn-primary" style={{ fontSize: '0.78rem', padding: '0.3rem 0.65rem' }}><Plus size={11} />Add Contact</button>
@@ -227,7 +284,7 @@ export default function ProjectDetail() {
           </div>
 
           {/* Assigned Candidates */}
-          <div className="card" style={{ padding: '1.25rem' }}>
+          <div id="assigned-candidates" className="card" style={{ padding: '1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <SectionLabel>Assigned Candidates ({assignedCandidates.length})</SectionLabel>
               <button className="btn-secondary" style={{ fontSize: '0.78rem', padding: '0.3rem 0.65rem' }} onClick={() => openModal()}>
