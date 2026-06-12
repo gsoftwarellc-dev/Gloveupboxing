@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Search, Building2, Users, ChevronRight, ChevronLeft } from 'lucide-react'
 import { clientCompanies } from '../data/clients'
+import { findRelatedProjects } from '../utils/clientMatching'
 
 const PAGE_SIZE = 24
 
@@ -13,6 +14,8 @@ export default function Clients() {
   const [search, setSearch] = useState('')
   const [discipline, setDiscipline] = useState('all')
   const [page, setPage] = useState(1)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   const filtered = clientCompanies.filter(c => {
     const q = search.toLowerCase()
@@ -24,7 +27,13 @@ export default function Clients() {
         (ct.email ?? '').toLowerCase().includes(q)
       )
     const matchesDiscipline = discipline === 'all' || c.disciplines.includes(discipline)
-    return matchesSearch && matchesDiscipline
+    const matchesDateRange = (!dateFrom && !dateTo) || findRelatedProjects(c).some(p => {
+      if (!p.startDate) return false
+      if (dateFrom && p.startDate < dateFrom) return false
+      if (dateTo && p.startDate > dateTo) return false
+      return true
+    })
+    return matchesSearch && matchesDiscipline && matchesDateRange
   })
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
@@ -59,7 +68,7 @@ export default function Clients() {
       </div>
 
       {/* Search + Filter */}
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ position: 'relative', flex: '1 1 240px' }}>
           <Search size={14} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
           <input
@@ -81,6 +90,31 @@ export default function Clients() {
             <option key={d} value={d}>{d}</option>
           ))}
         </select>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>From</label>
+          <input
+            type="date"
+            className="input"
+            style={{ fontSize: '0.9rem' }}
+            value={dateFrom}
+            onChange={e => { setDateFrom(e.target.value); setPage(1) }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>To</label>
+          <input
+            type="date"
+            className="input"
+            style={{ fontSize: '0.9rem' }}
+            value={dateTo}
+            onChange={e => { setDateTo(e.target.value); setPage(1) }}
+          />
+        </div>
+        {(dateFrom || dateTo) && (
+          <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => { setDateFrom(''); setDateTo(''); setPage(1) }}>
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Client list */}

@@ -34,6 +34,8 @@ export default function Candidates() {
   const [search, setSearch] = useState(searchParams.get('search') ?? '')
   const [discipline, setDiscipline] = useState('All')
   const [status, setStatus] = useState('All')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
   const [showAddModal, setShowAddModal] = useState(false)
   const [assignModal, setAssignModal] = useState<number | null>(null)
@@ -82,7 +84,10 @@ export default function Candidates() {
     const matchPool =
       poolTab === 'qualified' ? c.status === 'qualified' :
       poolTab === 'placed' ? c.status === 'placed' : true
-    return matchSearch && matchDiscipline && matchStatus && matchPool
+    const matchDateRange =
+      (!dateFrom || c.dateAdded >= dateFrom) &&
+      (!dateTo || c.dateAdded <= dateTo)
+    return matchSearch && matchDiscipline && matchStatus && matchPool && matchDateRange
   })
 
   const assignCandidate = assignModal ? candidates.find(c => c.id === assignModal) : null
@@ -307,6 +312,31 @@ export default function Candidates() {
                 <option value="All">All Status</option>
                 {Object.entries(statusConfig).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
               </select>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.2rem', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>From</label>
+                <input
+                  type="date"
+                  className="input"
+                  style={{ fontSize: '0.82rem' }}
+                  value={dateFrom}
+                  onChange={e => { setDateFrom(e.target.value); setPage(1) }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.2rem', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>To</label>
+                <input
+                  type="date"
+                  className="input"
+                  style={{ fontSize: '0.82rem' }}
+                  value={dateTo}
+                  onChange={e => { setDateTo(e.target.value); setPage(1) }}
+                />
+              </div>
+              {(dateFrom || dateTo) && (
+                <button className="btn-secondary" style={{ fontSize: '0.82rem', alignSelf: 'flex-end' }} onClick={() => { setDateFrom(''); setDateTo(''); setPage(1) }}>
+                  Clear
+                </button>
+              )}
               <button className="btn-secondary" style={{ fontSize: '0.82rem' }}><SlidersHorizontal size={14} />More Filters</button>
               <div style={{ display: 'flex', gap: '2px', marginLeft: 'auto', background: '#f3f4f6', borderRadius: '0.5rem', padding: '2px' }}>
                 <button onClick={() => setViewMode('table')} style={{ padding: '0.35rem 0.6rem', border: 'none', cursor: 'pointer', borderRadius: '0.375rem', background: viewMode === 'table' ? '#1a1a2e' : 'transparent', color: viewMode === 'table' ? '#fff' : '#6b7280' }}>

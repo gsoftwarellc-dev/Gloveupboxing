@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Search, MapPin, Calendar, Users, ChevronRight, ChevronLeft } from 'lucide-react'
 import { projects } from '../data/mock'
+import { useProjectAssignments } from '../utils/projectAssignments'
 
 const PAGE_SIZE = 20
 
@@ -13,6 +14,13 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
 }
 
 type SortKey = 'score' | 'priority' | 'value' | 'name'
+type RecruitmentFilter = 'all' | 'staffed' | 'in-progress' | 'not-started'
+
+function recruitmentStatusFor(assignedCount: number, rolesNeeded: number): { key: Exclude<RecruitmentFilter, 'all'>; label: string; cls: string } {
+  if (assignedCount === 0) return { key: 'not-started', label: 'Not Started', cls: 'badge-gray' }
+  if (rolesNeeded > 0 && assignedCount < rolesNeeded) return { key: 'in-progress', label: `In Progress (${assignedCount}/${rolesNeeded})`, cls: 'badge-yellow' }
+  return { key: 'staffed', label: 'Staffed', cls: 'badge-green' }
+}
 
 const priorityRank: Record<string, number> = {
   'Priority 1': 1, 'Priority 1+': 0, 'Priority 2': 2, 'Priority 3': 3, 'Priority 4': 4,
@@ -33,11 +41,26 @@ export default function Projects() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState<SortKey>('score')
+  const [recruitmentFilter, setRecruitmentFilter] = useState<RecruitmentFilter>('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const assignments = useProjectAssignments()
 
   const filtered = projects
     .filter(p => {
       const q = search.toLowerCase()
       return p.name.toLowerCase().includes(q) || p.client.toLowerCase().includes(q) || p.location.toLowerCase().includes(q)
+    })
+    .filter(p => {
+      if (recruitmentFilter === 'all') return true
+      const assignedCount = assignments[p.id]?.length ?? 0
+      return recruitmentStatusFor(assignedCount, p.rolesNeeded ?? 0).key === recruitmentFilter
+    })
+    .filter(p => {
+      if (dateFrom && (!p.startDate || p.startDate < dateFrom)) return false
+      if (dateTo && (!p.startDate || p.startDate > dateTo)) return false
+      return true
     })
     .slice()
     .sort((a, b) => {
@@ -61,6 +84,23 @@ export default function Projects() {
 
   const totalRoles = projects.reduce((a, p) => a + p.rolesNeeded, 0)
   const activeCount = projects.filter(p => p.status === 'active').length
+
+  const recruitmentCounts = projects.reduce(
+    (acc, p) => {
+      const assignedCount = assignments[p.id]?.length ?? 0
+      const key = recruitmentStatusFor(assignedCount, p.rolesNeeded ?? 0).key
+      acc[key]++
+      return acc
+    },
+    { staffed: 0, 'in-progress': 0, 'not-started': 0 } as Record<Exclude<RecruitmentFilter, 'all'>, number>
+  )
+
+  const recruitmentTabs: { key: RecruitmentFilter; label: string }[] = [
+    { key: 'all', label: `All (${projects.length})` },
+    { key: 'staffed', label: `Staffed (${recruitmentCounts.staffed})` },
+    { key: 'in-progress', label: `In Progress (${recruitmentCounts['in-progress']})` },
+    { key: 'not-started', label: `Not Started (${recruitmentCounts['not-started']})` },
+  ]
 
   const totalValueM = projects.reduce((sum, p) => {
     const v = String(p.value)
@@ -101,8 +141,22 @@ export default function Projects() {
         ))}
       </div>
 
-      {/* Search + Sort */}
-      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+      {/* Recruitment filter tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {recruitmentTabs.map(tab => (
+          <button
+            key={tab.key}
+            className={recruitmentFilter === tab.key ? 'btn-primary' : 'btn-secondary'}
+            style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
+            onClick={() => { setRecruitmentFilter(tab.key); setPage(1) }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search + Sort + Date range */}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ position: 'relative', flex: '1 1 240px' }}>
           <Search size={14} style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
           <input
@@ -124,6 +178,31 @@ export default function Projects() {
           <option value="value">Sort: Contract Value (High → Low)</option>
           <option value="name">Sort: Name (A → Z)</option>
         </select>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>From</label>
+          <input
+            type="date"
+            className="input"
+            style={{ fontSize: '0.9rem' }}
+            value={dateFrom}
+            onChange={e => { setDateFrom(e.target.value); setPage(1) }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>To</label>
+          <input
+            type="date"
+            className="input"
+            style={{ fontSize: '0.9rem' }}
+            value={dateTo}
+            onChange={e => { setDateTo(e.target.value); setPage(1) }}
+          />
+        </div>
+        {(dateFrom || dateTo) && (
+          <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => { setDateFrom(''); setDateTo(''); setPage(1) }}>
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Projects table-style list */}
@@ -131,6 +210,8 @@ export default function Projects() {
         {paged.map(p => {
           const scoreColor = p.opportunityScore >= 80 ? '#15803d' : p.opportunityScore >= 60 ? '#b8942e' : '#b91c1c'
           const scoreBg = p.opportunityScore >= 80 ? '#f0fdf4' : p.opportunityScore >= 60 ? '#fefce8' : '#fef2f2'
+          const assignedCount = assignments[p.id]?.length ?? 0
+          const recruitment = recruitmentStatusFor(assignedCount, p.rolesNeeded ?? 0)
           return (
             <div key={p.id} className="card" style={{ padding: '1.1rem 1.25rem', display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
 
@@ -150,6 +231,7 @@ export default function Projects() {
                   <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#111' }}>{p.name}</span>
                   <span className={`badge ${statusConfig[p.status]?.cls || 'badge-gray'}`}>{statusConfig[p.status]?.label || p.status}</span>
                   {p.priority && <span className="badge badge-gray">{p.priority}</span>}
+                  <span className={`badge ${recruitment.cls}`} style={{ fontSize: '0.72rem' }}>{recruitment.label}</span>
                 </div>
                 <div style={{ fontSize: '0.85rem', color: '#b8942e', fontWeight: 600, marginTop: '0.15rem' }}>{p.client}</div>
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>

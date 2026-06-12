@@ -1,47 +1,22 @@
 import { useState } from 'react'
 import {
-  Users, Shield, Database, Bell, Globe, Key,
-  Plus, Trash2, Edit, Save, Upload, RefreshCw, Award, Mail
+  Users, Shield, Database, Globe, Key,
+  Plus, Trash2, Edit, Save, Upload, RefreshCw, Mail
 } from 'lucide-react'
 
 // ── Data ───────────────────────────────────────────────────────────────────
 
 const settingsSections = [
   { key: 'users',         label: 'Users & Roles',    icon: Users },
-  { key: 'certificates',  label: 'Certificates',     icon: Award },
   { key: 'email',         label: 'Email / SMTP',     icon: Mail },
   { key: 'security',      label: 'Security',         icon: Shield },
   { key: 'integrations',  label: 'Integrations',     icon: Globe },
   { key: 'data',          label: 'Data & Import',    icon: Database },
-  { key: 'notifications', label: 'Notifications',    icon: Bell },
   { key: 'api',           label: 'API & Keys',       icon: Key },
-]
-
-const defaultCertificates = [
-  { id: 1,  name: 'SMSTS',               category: 'Site Management',    description: 'Site Management Safety Training Scheme' },
-  { id: 2,  name: 'CSCS Gold Card',      category: 'CSCS',               description: 'Construction Skills Certification Scheme — Supervisory' },
-  { id: 3,  name: 'CSCS Black Card',     category: 'CSCS',               description: 'Construction Skills Certification Scheme — Manager' },
-  { id: 4,  name: 'CSCS Blue Card',      category: 'CSCS',               description: 'Construction Skills Certification Scheme — Skilled Worker' },
-  { id: 5,  name: 'NEBOSH Diploma',      category: 'Health & Safety',    description: 'National Examination Board in Occupational Safety & Health' },
-  { id: 6,  name: 'IOSH Managing Safely',category: 'Health & Safety',    description: 'Institution of Occupational Safety and Health' },
-  { id: 7,  name: 'First Aid at Work',   category: 'First Aid',          description: '3-day HSE First Aid certificate' },
-  { id: 8,  name: 'MRICS',              category: 'Professional',        description: 'Membership of the Royal Institution of Chartered Surveyors' },
-  { id: 9,  name: 'IStructE Chartership',category: 'Professional',       description: 'Institution of Structural Engineers' },
-  { id: 10, name: 'PMP',               category: 'Project Management',   description: 'Project Management Professional' },
-  { id: 11, name: 'PRINCE2 Practitioner',category: 'Project Management', description: 'Projects IN Controlled Environments' },
-  { id: 12, name: 'CPCS Appointed Person',category: 'Plant',             description: 'Construction Plant Competence Scheme' },
-  { id: 13, name: 'NPORS',             category: 'Plant',                description: 'National Plant Operators Registration Scheme' },
-  { id: 14, name: 'ECS Gold Card',     category: 'Electrical',           description: 'Electrotechnical Certification Scheme — Approved Electrician' },
-  { id: 15, name: 'CIBSE Membership', category: 'MEP',                   description: 'Chartered Institution of Building Services Engineers' },
 ]
 
 const teamMembers = [
   { id: 1, name: 'Super Admin',   email: 'admin@backfill.co', role: 'Super Admin', status: 'active', lastLogin: '08 Jun 2025' },
-  { id: 2, name: 'Tom Bradley',   email: 'tom@backfill.co',   role: 'Recruiter',   status: 'active', lastLogin: '08 Jun 2025' },
-  { id: 3, name: 'Emma Clarke',   email: 'emma@backfill.co',  role: 'Recruiter',   status: 'active', lastLogin: '07 Jun 2025' },
-  { id: 4, name: 'Mark Richards', email: 'mark@backfill.co',  role: 'Recruiter',   status: 'active', lastLogin: '06 Jun 2025' },
-  { id: 5, name: 'Priya Sharma',  email: 'priya@backfill.co', role: 'Recruiter',   status: 'active', lastLogin: '05 Jun 2025' },
-  { id: 6, name: 'Sales Manager', email: 'sales@backfill.co', role: 'Admin',       status: 'active', lastLogin: '04 Jun 2025' },
 ]
 
 const roleConfig: Record<string, string> = {
@@ -91,10 +66,6 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 export default function AdminSettings() {
   const [activeSection, setActiveSection] = useState('users')
   const [showAddUser, setShowAddUser] = useState(false)
-  const [certificates, setCertificates] = useState(defaultCertificates)
-  const [newCertName, setNewCertName] = useState('')
-  const [newCertCategory, setNewCertCategory] = useState('Site Management')
-  const [newCertDesc, setNewCertDesc] = useState('')
 
 
   return (
@@ -197,52 +168,6 @@ export default function AdminSettings() {
                 </div>
               </div>
             </>
-          )}
-
-          {/* ── Certificates ── */}
-          {activeSection === 'certificates' && (
-            <div className="card" style={{ padding: '1.25rem' }}>
-              <SectionHeader title="Certificate Library" subtitle={`${certificates.length} certificates configured`} />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                {certificates.map((cert, i) => (
-                  <div key={cert.id} style={{
-                    display: 'flex', alignItems: 'center', gap: '0.875rem',
-                    padding: '0.7rem 0',
-                    borderBottom: i < certificates.length - 1 ? '1px solid #f3f4f6' : 'none'
-                  }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '0.375rem', background: '#fdfaf3', border: '1px solid #e9d98a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Award size={14} style={{ color: '#b8942e' }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#111' }}>{cert.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.1rem' }}>{cert.description}</div>
-                    </div>
-                    <span style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem', background: '#fdfaf3', border: '1px solid #e9d98a', borderRadius: '0.375rem', color: '#92400e', fontWeight: 600, flexShrink: 0 }}>{cert.category}</span>
-                    <button className="btn-ghost" style={{ padding: '0.25rem', flexShrink: 0 }} onClick={() => setCertificates(prev => prev.filter(c => c.id !== cert.id))}>
-                      <Trash2 size={13} style={{ color: '#ef4444' }} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #e5e7eb' }}>
-                <p style={{ margin: '0 0 0.75rem', fontSize: '0.78rem', fontWeight: 700, color: '#374151' }}>Add New Certificate</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr auto', gap: '0.625rem', alignItems: 'flex-end' }}>
-                  <FormField label="Name"><input className="input" style={{ fontSize: '0.82rem' }} placeholder="e.g. SMSTS" value={newCertName} onChange={e => setNewCertName(e.target.value)} /></FormField>
-                  <FormField label="Category">
-                    <select className="input" style={{ fontSize: '0.82rem' }} value={newCertCategory} onChange={e => setNewCertCategory(e.target.value)}>
-                      {['Site Management','CSCS','Health & Safety','First Aid','Professional','Project Management','Plant','Electrical','MEP'].map(c => <option key={c}>{c}</option>)}
-                    </select>
-                  </FormField>
-                  <FormField label="Description"><input className="input" style={{ fontSize: '0.82rem' }} placeholder="Short description..." value={newCertDesc} onChange={e => setNewCertDesc(e.target.value)} /></FormField>
-                  <button className="btn-primary" style={{ fontSize: '0.82rem' }} onClick={() => {
-                    if (!newCertName.trim()) return
-                    setCertificates(prev => [...prev, { id: Date.now(), name: newCertName.trim(), category: newCertCategory, description: newCertDesc.trim() }])
-                    setNewCertName(''); setNewCertDesc('')
-                  }}><Plus size={13} />Add</button>
-                </div>
-              </div>
-            </div>
           )}
 
           {/* ── Email / SMTP ── */}
@@ -383,34 +308,6 @@ export default function AdminSettings() {
                 <button className="btn-secondary" style={{ fontSize: '0.82rem', marginTop: '1rem' }}><RefreshCw size={13} />Run Manual Backup</button>
               </div>
             </>
-          )}
-
-          {/* ── Notifications ── */}
-          {activeSection === 'notifications' && (
-            <div className="card" style={{ padding: '1.25rem' }}>
-              <SectionHeader title="Notification Preferences" subtitle="Choose how you receive alerts and updates" />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0.5rem 1.5rem', alignItems: 'center', marginBottom: '0.5rem', padding: '0 0 0.5rem', borderBottom: '1px solid #f3f4f6' }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Event</span>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</span>
-                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>In-App</span>
-              </div>
-              {[
-                { label: 'New candidate registration',    email: true,  inApp: true },
-                { label: 'Vacancy application received',  email: true,  inApp: true },
-                { label: 'Interview scheduled',           email: true,  inApp: true },
-                { label: 'Placement confirmed',           email: true,  inApp: true },
-                { label: 'Email campaign results',        email: false, inApp: true },
-                { label: 'Weekly summary report',         email: true,  inApp: false },
-                { label: 'System alerts',                 email: true,  inApp: true },
-              ].map(n => (
-                <div key={n.label} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0.5rem 1.5rem', alignItems: 'center', padding: '0.625rem 0', borderBottom: '1px solid #f3f4f6' }}>
-                  <span style={{ fontSize: '0.85rem', color: '#111', fontWeight: 500 }}>{n.label}</span>
-                  <input type="checkbox" defaultChecked={n.email} style={{ accentColor: '#b8942e', width: 15, height: 15 }} />
-                  <input type="checkbox" defaultChecked={n.inApp} style={{ accentColor: '#b8942e', width: 15, height: 15 }} />
-                </div>
-              ))}
-              <button className="btn-primary" style={{ fontSize: '0.82rem', marginTop: '1.25rem' }}><Save size={13} />Save Preferences</button>
-            </div>
           )}
 
           {/* ── API & Keys ── */}

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { candidates as allCandidates, projects as mockProjects } from '../data/mock'
 import { findRelatedClients } from '../utils/clientMatching'
+import { useProjectAssignedIds, assignCandidateToProject, unassignCandidateFromProject } from '../utils/projectAssignments'
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,7 @@ export default function ProjectDetail() {
   const status = statusConfig[project.status] ?? { label: project.status, cls: 'badge-gray' }
   const relatedClients = findRelatedClients(project)
 
-  const [assignedIds, setAssignedIds] = useState<number[]>([])
+  const assignedIds = useProjectAssignedIds(project.id)
   const [showModal, setShowModal] = useState(false)
   const [selectedRole, setSelectedRole] = useState('')
   const [selectedStartDate, setSelectedStartDate] = useState('2025-07-01')
@@ -55,6 +56,13 @@ export default function ProjectDetail() {
   const [modalDiscipline, setModalDiscipline] = useState('')
 
   const assignedCandidates = allCandidates.filter(c => assignedIds.includes(c.id))
+
+  const rolesNeeded = project.rolesNeeded ?? 0
+  const recruitmentStatus = assignedCandidates.length === 0
+    ? { label: 'Recruitment: Not Started', cls: 'badge-gray' }
+    : rolesNeeded > 0 && assignedCandidates.length < rolesNeeded
+      ? { label: `Recruitment: In Progress (${assignedCandidates.length}/${rolesNeeded})`, cls: 'badge-yellow' }
+      : { label: 'Recruitment: Staffed', cls: 'badge-green' }
 
   const allLocations = [...new Set(allCandidates.map(c => c.location))].sort()
   const allDisciplines = [...new Set(allCandidates.map(c => c.discipline))].sort()
@@ -74,12 +82,12 @@ export default function ProjectDetail() {
   }
 
   function assignCandidate(candidateId: number) {
-    setAssignedIds(prev => [...prev, candidateId])
+    assignCandidateToProject(project.id, candidateId)
     setShowModal(false)
   }
 
   function removeAssignment(candidateId: number) {
-    setAssignedIds(prev => prev.filter(i => i !== candidateId))
+    unassignCandidateFromProject(project.id, candidateId)
   }
 
   const fmt = (d: string) => {
@@ -122,6 +130,7 @@ export default function ProjectDetail() {
               <span className={`badge ${status.cls}`}>{status.label}</span>
               <span className="badge badge-gray">{project.stage}</span>
               {project.priority && <span className="badge badge-gold">{project.priority}</span>}
+              <span className={`badge ${recruitmentStatus.cls}`}>{recruitmentStatus.label}</span>
             </div>
             <p style={{ margin: '0.2rem 0 0', fontSize: '0.9rem', color: '#b8942e', fontWeight: 600 }}>
               {project.client}{project.mainContractor ? ` · Main Contractor: ${project.mainContractor}` : ''}

@@ -2,7 +2,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts'
-import { Building2, FolderKanban, Users, Banknote, Star, Hammer } from 'lucide-react'
+import { Building2, FolderKanban, Users, Banknote } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { projects } from '../data/mock'
 import { clientCompanies } from '../data/clients'
@@ -18,9 +18,6 @@ function parseValueMillions(value: string | number): number {
 }
 
 const totalPipelineValue = projects.reduce((sum, p) => sum + parseValueMillions(p.value), 0)
-
-const priority1Count = projects.filter(p => p.priority === 'Priority 1').length
-const onSiteCount = projects.filter(p => p.stage === 'On Site').length
 
 // Projects by sector
 const sectorCounts = projects.reduce<Record<string, number>>((acc, p) => {
@@ -96,13 +93,11 @@ export default function Dashboard() {
       </div>
 
       {/* KPI cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
         <StatCard icon={FolderKanban} label="Active Projects" value={projects.length} color="#f97316" />
         <StatCard icon={Building2} label="Client Companies" value={clientCompanies.length} color="#60a5fa" />
         <StatCard icon={Users} label="Client Contacts" value={totalClientContacts.toLocaleString()} color="#b8942e" />
         <StatCard icon={Banknote} label="Pipeline Value" value={`£${totalPipelineValue.toFixed(0)}m+`} color="#fbbf24" />
-        <StatCard icon={Star} label="Priority 1 Projects" value={priority1Count} color="#ef4444" />
-        <StatCard icon={Hammer} label="Projects On Site" value={onSiteCount} color="#10b981" />
       </div>
 
       {/* Priority highlights — directly after stat cards */}
