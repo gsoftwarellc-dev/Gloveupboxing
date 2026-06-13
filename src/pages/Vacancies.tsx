@@ -214,7 +214,7 @@ export default function Vacancies() {
               <Globe size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
               {publishedCount} of {vacancies.length} vacancies are live on your public jobs page
             </div>
-            <a href="http://localhost:5173/website-preview/jobs" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#b8942e', fontWeight: 700, textDecoration: 'none' }}>Preview website →</a>
+            <a href="http://localhost:5173/home/jobs" target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.78rem', color: '#b8942e', fontWeight: 700, textDecoration: 'none' }}>Preview website →</a>
           </div>
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

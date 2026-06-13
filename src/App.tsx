@@ -19,15 +19,22 @@ import PostJob from './pages/PostJob'
 import PublicJobs from './pages/website/PublicJobs'
 import JobDetail from './pages/website/JobDetail'
 import CandidateApply from './pages/website/CandidateApply'
+import Home from './pages/website/Home'
+import SiteLayout from './pages/website/SiteLayout'
+import Contact from './pages/website/Contact'
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Website preview — no sidebar layout */}
-        <Route path="website-preview/jobs" element={<PublicJobs />} />
-        <Route path="website-preview/jobs/:id" element={<JobDetail />} />
-        <Route path="website-preview/apply" element={<CandidateApply />} />
+        {/* Public website — shared header/footer via SiteLayout */}
+        <Route path="home" element={<SiteLayout />}>
+          <Route index element={<Home />} />
+          <Route path="jobs" element={<PublicJobs />} />
+          <Route path="jobs/:id" element={<JobDetail />} />
+          <Route path="apply" element={<CandidateApply />} />
+          <Route path="contact" element={<Contact />} />
+        </Route>
 
         <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />

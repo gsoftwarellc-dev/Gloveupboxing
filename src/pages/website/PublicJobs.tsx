@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin, Clock, Briefcase, Search, Filter, ChevronRight, Building2 } from 'lucide-react'
 import { vacancies } from '../../data/mock'
-import logo from '../../assets/logo-sidebar.png'
 
 const publicVacancies = vacancies.filter(v => v.visibility !== 'Private' && v.status !== 'closed')
 
@@ -24,24 +23,7 @@ export default function PublicJobs() {
   })
 
   return (
-    <div style={{ minHeight: '100vh', width: '100%', background: '#f5f6fa', fontFamily: 'Inter, sans-serif' }}>
-      {/* Header */}
-      <header style={{ background: '#F8F7F5', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <img src={logo} alt="Backfill" style={{ height: '58px', width: 'auto', objectFit: 'contain', display: 'block', maxWidth: '280px' }} />
-            </div>
-            <nav style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-              <a href="#" style={{ color: '#b8942e', textDecoration: 'none', fontSize: '1rem', fontWeight: 600 }}>Jobs</a>
-              <a href="#" style={{ color: '#374151', textDecoration: 'none', fontSize: '1rem' }}>About</a>
-              <a href="#" style={{ color: '#374151', textDecoration: 'none', fontSize: '1rem' }}>Contact</a>
-              <Link to="/website-preview/apply" style={{ padding: '0.45rem 1rem', background: '#b8942e', color: '#fff', borderRadius: '6px', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 700 }}>Register CV</Link>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+    <div style={{ width: '100%', background: '#f5f6fa', fontFamily: 'Inter, sans-serif' }}>
       {/* Hero */}
       <div style={{ background: 'linear-gradient(135deg, #1e2535 0%, #252f46 100%)', padding: '3.5rem 1.5rem', textAlign: 'center' }}>
         <h1 style={{ color: '#ffffff', fontSize: '2rem', fontWeight: 800, margin: '0 0 0.5rem' }}>Construction & Engineering Jobs</h1>
@@ -59,7 +41,7 @@ export default function PublicJobs() {
       </div>
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+        <div className="jobs-layout" style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '1.5rem', alignItems: 'start' }}>
           {/* Filters sidebar */}
           <aside>
             <div style={{ background: '#fff', borderRadius: '10px', padding: '1.25rem', border: '1px solid #e5e7eb' }}>
@@ -92,7 +74,7 @@ export default function PublicJobs() {
             <div style={{ marginTop: '1rem', background: 'linear-gradient(135deg,#1e2535,#252f46)', borderRadius: '10px', padding: '1.25rem', border: '1px solid #b8942e30' }}>
               <div style={{ fontWeight: 700, color: '#fff', marginBottom: '0.5rem', fontSize: '1rem' }}>Don't see your role?</div>
               <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 0.875rem' }}>Register your CV and we'll match you when the right vacancy comes in.</p>
-              <Link to="/website-preview/apply" style={{ display: 'block', background: '#b8942e', color: '#fff', borderRadius: '6px', padding: '0.5rem 1rem', textDecoration: 'none', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem' }}>Register CV</Link>
+              <Link to="/home/apply" style={{ display: 'block', background: '#b8942e', color: '#fff', borderRadius: '6px', padding: '0.5rem 1rem', textDecoration: 'none', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem' }}>Register CV</Link>
             </div>
           </aside>
 
@@ -108,7 +90,7 @@ export default function PublicJobs() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
               {filtered.map(v => (
-                <Link key={v.id} to={`/website-preview/jobs/${v.id}`} style={{ textDecoration: 'none' }}>
+                <Link key={v.id} to={`/home/jobs/${v.id}`} style={{ textDecoration: 'none' }}>
                   <div style={{ background: '#fff', borderRadius: '10px', padding: '1.25rem', border: '1px solid #e5e7eb', transition: 'box-shadow 0.15s, border-color 0.15s', cursor: 'pointer' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#b8942e'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(184,148,46,0.1)' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}
@@ -165,15 +147,6 @@ export default function PublicJobs() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer style={{ background: '#1e2535', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '2rem 1.5rem', marginTop: '3rem', textAlign: 'center' }}>
-        <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>© 2025 Backfill Construction Recruitment. All rights reserved.</div>
-        <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>
-          <a href="#" style={{ color: '#6b7fa3', textDecoration: 'none', fontSize: '0.85rem' }}>Privacy Policy</a>
-          <a href="#" style={{ color: '#6b7fa3', textDecoration: 'none', fontSize: '0.85rem' }}>Terms</a>
-          <a href="#" style={{ color: '#6b7fa3', textDecoration: 'none', fontSize: '0.85rem' }}>Contact</a>
-        </div>
-      </footer>
     </div>
   )
 }

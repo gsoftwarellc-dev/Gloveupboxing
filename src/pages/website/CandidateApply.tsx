@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Upload, CheckCircle, ChevronRight, ChevronLeft, User, Briefcase, Award, FileText } from 'lucide-react'
-import logo from '../../assets/logo-sidebar.png'
 
 const steps = ['Personal Details', 'Work Experience', 'Certificates', 'CV Upload', 'Review']
 
@@ -25,7 +24,7 @@ export default function CandidateApply() {
 
   if (submitted) {
     return (
-      <div style={{ minHeight: '100vh', background: '#f5f6fa', fontFamily: 'Inter, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '70vh', background: '#f5f6fa', fontFamily: 'Inter, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem 1.5rem' }}>
         <div style={{ background: '#fff', borderRadius: '16px', padding: '3rem', textAlign: 'center', maxWidth: 480, border: '1px solid #e5e7eb', boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
             <CheckCircle size={32} style={{ color: '#16a34a' }} />
@@ -34,26 +33,14 @@ export default function CandidateApply() {
           <p style={{ margin: '0 0 1.5rem', color: '#6b7280', fontSize: '1rem', lineHeight: 1.6 }}>
             Thank you, {form.firstName || 'there'}! One of our consultants will review your details and be in touch within 2 working days.
           </p>
-          <Link to="/website-preview/jobs" style={{ display: 'inline-block', background: '#b8942e', color: '#fff', borderRadius: '8px', padding: '0.75rem 1.5rem', textDecoration: 'none', fontWeight: 700, fontSize: '1rem' }}>Browse More Jobs</Link>
+          <Link to="/home/jobs" style={{ display: 'inline-block', background: '#b8942e', color: '#fff', borderRadius: '8px', padding: '0.75rem 1.5rem', textDecoration: 'none', fontWeight: 700, fontSize: '1rem' }}>Browse More Jobs</Link>
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', width: '100%', background: '#f5f6fa', fontFamily: 'Inter, sans-serif' }}>
-      {/* Header */}
-      <header style={{ background: '#1e2535', borderBottom: '3px solid #b8942e' }}>
-        <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <img src={logo} alt="Backfill" style={{ height: '58px', width: 'auto', objectFit: 'contain', display: 'block', maxWidth: '280px' }} />
-            </div>
-            <Link to="/website-preview/jobs" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>← Back to jobs</Link>
-          </div>
-        </div>
-      </header>
-
+    <div style={{ width: '100%', background: '#f5f6fa', fontFamily: 'Inter, sans-serif' }}>
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '2.5rem 1.5rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <h1 style={{ margin: '0 0 0.5rem', fontSize: '1.6rem', fontWeight: 800, color: '#000' }}>Register Your CV</h1>
@@ -90,7 +77,7 @@ export default function CandidateApply() {
           {step === 0 && (
             <div>
               <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.15rem', fontWeight: 700, color: '#000' }}>Personal Details</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="apply-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{ display: 'block', fontWeight: 600, color: '#000', marginBottom: '0.35rem', fontSize: '0.9rem' }}>First Name *</label>
                   <input style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '0.625rem 0.875rem', fontSize: '1rem', color: '#000', outline: 'none', boxSizing: 'border-box' }} placeholder="John" value={form.firstName} onChange={e => update('firstName', e.target.value)} />
@@ -130,7 +117,7 @@ export default function CandidateApply() {
           {step === 1 && (
             <div>
               <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.15rem', fontWeight: 700, color: '#000' }}>Work Experience</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="apply-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div style={{ gridColumn: '1/-1' }}>
                   <label style={{ display: 'block', fontWeight: 600, color: '#000', marginBottom: '0.35rem', fontSize: '0.9rem' }}>Job Title / Role *</label>
                   <input style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '0.625rem 0.875rem', fontSize: '1rem', color: '#000', outline: 'none', boxSizing: 'border-box' }} placeholder="e.g. Senior Site Manager" value={form.jobTitle} onChange={e => update('jobTitle', e.target.value)} />

@@ -143,7 +143,7 @@ export default function Layout() {
               <Settings size={18} />
             </NavLink>
             <a
-              href="/website-preview/jobs"
+              href="/home/jobs"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-ghost"
@@ -182,7 +182,7 @@ export default function Layout() {
                 <Settings size={14} />
                 Settings
               </Link>
-              <a href="/website-preview/jobs" target="_blank" rel="noopener noreferrer" className="header-dropdown-item">
+              <a href="/home/jobs" target="_blank" rel="noopener noreferrer" className="header-dropdown-item">
                 <Globe size={14} />
                 Website Preview
               </a>
@@ -307,7 +307,7 @@ export default function Layout() {
                   <span>Settings</span>
                 </NavLink>
                 <a
-                  href="/website-preview/jobs"
+                  href="/home/jobs"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="sidebar-link"
