@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Outlet, NavLink, useLocation, Link } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Briefcase, FolderKanban, Building2,
-  Zap, MapPin, Mail, Activity, Settings,
-  Search, LogOut, Menu, BarChart2, Globe, ChevronDown, UserCheck, List, PlusCircle
+  Zap, MapPin, Mail, Settings,
+  Search, LogOut, Menu, Globe, ChevronDown, UserCheck, List, PlusCircle
 } from 'lucide-react'
 import logo from '../assets/logo-sidebar.png'
 
@@ -29,8 +29,6 @@ const navItems = [
   { to: '/matching',    icon: Zap,              label: 'Matching' },
   { to: '/geo-mapping', icon: MapPin,           label: 'Geo Mapping' },
   { to: '/email',       icon: Mail,             label: 'Mass Email' },
-  { to: '/activity',    icon: Activity,         label: 'Activity' },
-  { to: '/reports',     icon: BarChart2,        label: 'Reports' },
 ]
 
 export default function Layout() {

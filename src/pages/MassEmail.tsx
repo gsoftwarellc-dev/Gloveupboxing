@@ -28,28 +28,21 @@ const allRecipients: Recipient[] = clientCompanies.flatMap(c =>
     }))
 )
 
-const campaigns = [
-  { id: 1, name: 'Site Managers – Manchester Opportunities', recipients: 45, sent: 45, status: 'sent', date: '2025-06-06' },
-  { id: 2, name: 'Civil Engineers – Monthly Newsletter', recipients: 180, sent: 180, status: 'sent', date: '2025-06-01' },
-  { id: 3, name: 'New Vacancies – Structural Engineers', recipients: 62, sent: 62, status: 'sent', date: '2025-05-28' },
-  { id: 4, name: 'Groundworks Foremen – Contract Roles', recipients: 28, sent: 0, status: 'draft', date: '2025-06-08' },
-]
-
-const statusConfig: Record<string, { label: string; cls: string }> = {
-  sent: { label: 'Sent', cls: 'badge-green' },
-  draft: { label: 'Draft', cls: 'badge-gray' },
-  scheduled: { label: 'Scheduled', cls: 'badge-yellow' },
-  failed: { label: 'Failed', cls: 'badge-red' },
-}
-
 const PAGE_SIZE = 50
 
+function mergeRecipientFields(template: string, recipient: Recipient): string {
+  const firstName = recipient.name.trim().split(/\s+/)[0] || recipient.name
+
+  return template
+    .replaceAll('{{first_name}}', firstName)
+    .replaceAll('{{role}}', recipient.role || 'your role')
+    .replaceAll('{{company}}', recipient.company)
+}
+
 export default function MassEmail() {
-  const [tab, setTab] = useState<'campaigns' | 'compose'>('campaigns')
   const [composeStep, setComposeStep] = useState(1)
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
-  const [campaignName, setCampaignName] = useState('')
 
   const [search, setSearch] = useState('')
   const [discipline, setDiscipline] = useState('All Disciplines')
@@ -67,6 +60,18 @@ export default function MassEmail() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const previewRecipient = allRecipients.find(recipient => selected.has(recipient.key)) ?? allRecipients[0]
+  const previewSubject = previewRecipient
+    ? mergeRecipientFields(subject, previewRecipient)
+    : subject
+  const previewBodyTemplate = body || `Hi {{first_name}},
+
+I hope this message finds you well.
+
+We are contacting you about opportunities relevant to your work as {{role}} at {{company}}.`
+  const previewBody = previewRecipient
+    ? mergeRecipientFields(previewBodyTemplate, previewRecipient)
+    : previewBodyTemplate
 
   function toggle(key: string) {
     setSelected(prev => {
@@ -106,55 +111,10 @@ export default function MassEmail() {
             Send targeted campaigns to {allRecipients.length.toLocaleString()} client contacts across {clientCompanies.length} companies
           </p>
         </div>
-        <button className="btn-primary" onClick={() => { setTab('compose'); setComposeStep(1) }}><Plus size={15} />New Campaign</button>
+        <button className="btn-primary" onClick={() => setComposeStep(1)}><Plus size={15} />New Campaign</button>
       </div>
 
-      <div className="tab-bar">
-        <button className={`tab ${tab === 'campaigns' ? 'active' : ''}`} onClick={() => setTab('campaigns')}>Campaigns</button>
-        <button className={`tab ${tab === 'compose' ? 'active' : ''}`} onClick={() => { setTab('compose'); setComposeStep(1) }}>Compose</button>
-      </div>
-
-      {tab === 'campaigns' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-            {[
-              { label: 'Companies', value: clientCompanies.length, color: '#b8942e' },
-              { label: 'Contacts with Email', value: allRecipients.length.toLocaleString(), color: '#60a5fa' },
-              { label: 'Disciplines', value: ALL_DISCIPLINES.length, color: '#34d399' },
-              { label: 'Campaigns', value: campaigns.length, color: '#c084fc' },
-            ].map(s => (
-              <div key={s.label} className="card" style={{ textAlign: 'center', padding: '0.875rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: s.color }}>{s.value}</div>
-                <div style={{ fontSize: '1.05rem', color: '#000000', marginTop: '0.15rem' }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <table className="data-table">
-              <thead>
-                <tr><th>Campaign Name</th><th>Status</th><th>Recipients</th><th>Date</th></tr>
-              </thead>
-              <tbody>
-                {campaigns.map(c => (
-                  <tr key={c.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#000000', fontSize: '1.05rem' }}>{c.name}</div>
-                    </td>
-                    <td><span className={`badge ${statusConfig[c.status].cls}`}>{statusConfig[c.status].label}</span></td>
-                    <td style={{ color: '#000000' }}>{c.recipients}</td>
-                    <td style={{ fontSize: '1.05rem', color: '#000000' }}>{c.date}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {tab === 'compose' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '1.25rem', alignItems: 'start' }}>
+      <div>
           <div className="card">
             {/* Steps */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
@@ -265,33 +225,57 @@ export default function MassEmail() {
             )}
 
             {composeStep === 2 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <h3 className="section-title">Compose Message</h3>
-                <div>
-                  <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Campaign Name</label>
-                  <input className="input" placeholder="e.g. Site Managers – June Opportunities" value={campaignName} onChange={e => setCampaignName(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Email Subject</label>
-                  <input className="input" placeholder="Subject line..." value={subject} onChange={e => setSubject(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>From Name</label>
-                  <input className="input" defaultValue="Tom Bradley – Backfill Construction Recruitment" />
-                </div>
-                <div>
-                  <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Message Body</label>
-                  <textarea className="input" rows={8} placeholder="Write your email message here...
+              <div className="email-compose-layout">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}>
+                  <h3 className="section-title">Compose Message</h3>
+                  <div>
+                    <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Email Subject</label>
+                    <input className="input" placeholder="Subject line..." value={subject} onChange={e => setSubject(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Message Body</label>
+                    <textarea className="input" rows={8} placeholder="Write your email message here...
 
 Hi {{first_name}},
 
 I hope this message finds you well..." value={body} onChange={e => setBody(e.target.value)} style={{ resize: 'vertical' }} />
+                  </div>
+                  <div style={{ fontSize: '1.05rem', color: '#000000' }}>Available merge fields: {'{{first_name}}'} {'{{role}}'} {'{{company}}'}</div>
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'space-between' }}>
+                    <button className="btn-secondary" onClick={() => setComposeStep(1)}>← Back</button>
+                    <button className="btn-primary" onClick={() => setComposeStep(3)}>Next: Review →</button>
+                  </div>
                 </div>
-                <div style={{ fontSize: '1.05rem', color: '#000000' }}>Available merge fields: {'{{first_name}}'} {'{{role}}'} {'{{company}}'}</div>
-                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'space-between' }}>
-                  <button className="btn-secondary" onClick={() => setComposeStep(1)}>← Back</button>
-                  <button className="btn-primary" onClick={() => setComposeStep(3)}>Next: Review →</button>
-                </div>
+
+                <aside className="email-preview">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <Mail size={17} style={{ color: '#b8942e' }} />
+                    <h3 className="section-title">Client Preview</h3>
+                  </div>
+                  {previewRecipient && (
+                    <div style={{ paddingBottom: '0.875rem', marginBottom: '0.875rem', borderBottom: '1px solid #e5e7eb' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.2rem' }}>
+                        Previewing as {selected.size > 0 ? 'selected recipient' : 'sample recipient'}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#111' }}>{previewRecipient.name}</div>
+                      <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.15rem' }}>
+                        {previewRecipient.email}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Subject
+                  </div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#111', marginTop: '0.35rem', paddingBottom: '0.875rem', borderBottom: '1px solid #e5e7eb' }}>
+                    {previewSubject || 'Your email subject will appear here'}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '0.875rem' }}>
+                    Message
+                  </div>
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#374151', lineHeight: 1.65, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                    {previewBody}
+                  </div>
+                </aside>
               </div>
             )}
 
@@ -300,10 +284,8 @@ I hope this message finds you well..." value={body} onChange={e => setBody(e.tar
                 <h3 className="section-title">Review & Send</h3>
                 <div style={{ padding: '1rem', background: '#f8f9fb', borderRadius: '0.5rem', border: '1px solid #e8eaf0' }}>
                   {[
-                    { label: 'Campaign Name', value: campaignName || 'Untitled campaign' },
                     { label: 'Recipients', value: `${selected.size} contacts` },
                     { label: 'Subject', value: subject || 'No subject set' },
-                    { label: 'From', value: 'Tom Bradley – Backfill' },
                     { label: 'Schedule', value: 'Send now' },
                   ].map(r => (
                     <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid #1e1e1e' }}>
@@ -326,34 +308,7 @@ I hope this message finds you well..." value={body} onChange={e => setBody(e.tar
             )}
           </div>
 
-          {/* Discipline quick filters */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div className="card">
-              <h3 className="section-title" style={{ marginBottom: '0.875rem' }}>Disciplines</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                {ALL_DISCIPLINES.map(d => {
-                  const count = allRecipients.filter(r => r.disciplines.includes(d)).length
-                  return (
-                    <button
-                      key={d}
-                      onClick={() => { setDiscipline(d); setPage(1) }}
-                      style={{
-                        background: discipline === d ? 'rgba(184,148,46,0.1)' : '#f8f9fb',
-                        border: discipline === d ? '1px solid #b8942e' : '1px solid #e8eaf0',
-                        borderRadius: '0.5rem', padding: '0.5rem 0.75rem', textAlign: 'left', cursor: 'pointer',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                      }}
-                    >
-                      <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#000000' }}>{d}</span>
-                      <span className="badge badge-gray">{count}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
 
     </div>
   )

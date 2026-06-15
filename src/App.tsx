@@ -10,10 +10,8 @@ import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
 import Matching from './pages/Matching'
 import MassEmail from './pages/MassEmail'
-import Activity from './pages/Activity'
 import AdminSettings from './pages/AdminSettings'
 import GeoMapping from './pages/GeoMapping'
-import Reports from './pages/Reports'
 import ProjectDetail from './pages/ProjectDetail'
 import PostJob from './pages/PostJob'
 import PublicJobs from './pages/website/PublicJobs'
@@ -51,8 +49,8 @@ export default function App() {
           <Route path="matching" element={<Matching />} />
           <Route path="geo-mapping" element={<GeoMapping />} />
           <Route path="email" element={<MassEmail />} />
-          <Route path="activity" element={<Activity />} />
-          <Route path="reports" element={<Reports />} />
+          <Route path="activity" element={<Navigate to="/dashboard" replace />} />
+          <Route path="reports" element={<Navigate to="/dashboard" replace />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Routes>
