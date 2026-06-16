@@ -274,37 +274,8 @@ We have opportunities relevant to your background in {{discipline}}.`
       </div>
 
       <div className="card" style={{ padding: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 0 }}>
-            <h3 className="section-title" style={{ marginBottom: '0.35rem' }}>Bulk Messaging Features</h3>
-            <p style={{ margin: 0, color: '#4b5563', fontSize: '0.95rem', lineHeight: 1.6 }}>
-              Target the right candidates by postcode, area, and sector before you send a bulk message.
-            </p>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem', flexWrap: 'wrap' }}>
           <span className="badge badge-gold">{selectedCount.toLocaleString()} selected</span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
-          <div className="card" style={{ padding: '1rem', background: '#f8f9fb' }}>
-            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>Postcode Filters</div>
-            <div style={{ color: '#4b5563', fontSize: '0.92rem', lineHeight: 1.6 }}>Find candidates by exact postcode or outcode.</div>
-          </div>
-          <div className="card" style={{ padding: '1rem', background: '#f8f9fb' }}>
-            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>Area Filters</div>
-            <div style={{ color: '#4b5563', fontSize: '0.92rem', lineHeight: 1.6 }}>Narrow to a town, city, or local area.</div>
-          </div>
-          <div className="card" style={{ padding: '1rem', background: '#f8f9fb' }}>
-            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>Sector Filters</div>
-            <div style={{ color: '#4b5563', fontSize: '0.92rem', lineHeight: 1.6 }}>Target discipline, sector, or status.</div>
-          </div>
-          <div className="card" style={{ padding: '1rem', background: '#f8f9fb' }}>
-            <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>
-              {channel === 'mail' ? 'Bulk Delivery' : 'Bulk Messaging'}
-            </div>
-            <div style={{ color: '#4b5563', fontSize: '0.92rem', lineHeight: 1.6 }}>
-              {channel === 'mail' ? 'Send immediately or schedule later.' : 'Send a shorter bulk message with the same filters.'}
-            </div>
-          </div>
         </div>
 
         <div style={{ marginTop: '1rem' }}>
