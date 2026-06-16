@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Outlet, NavLink, useLocation, Link } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Briefcase, FolderKanban, Building2,
-  Zap, MapPin, Mail, Settings,
+  Zap, MapPin, Mail, Settings, FileText,
   Search, LogOut, Menu, Globe, ChevronDown, UserCheck, List, PlusCircle
 } from 'lucide-react'
 import logo from '../assets/logo-sidebar.png'
@@ -24,6 +24,7 @@ const navItems = [
       { to: '/vacancies/new', label: 'Post New Job',  icon: PlusCircle },
     ],
   },
+  { to: '/cvs',         icon: FileText,         label: 'CVs' },
   { to: '/projects',    icon: FolderKanban,     label: 'Projects' },
   { to: '/clients',     icon: Building2,        label: 'Clients' },
   { to: '/matching',    icon: Zap,              label: 'Matching' },

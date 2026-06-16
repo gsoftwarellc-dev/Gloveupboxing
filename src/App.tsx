@@ -9,6 +9,7 @@ import Projects from './pages/Projects'
 import Clients from './pages/Clients'
 import ClientDetail from './pages/ClientDetail'
 import Matching from './pages/Matching'
+import Cvs from './pages/Cvs'
 import MassEmail from './pages/MassEmail'
 import AdminSettings from './pages/AdminSettings'
 import GeoMapping from './pages/GeoMapping'
@@ -20,6 +21,8 @@ import CandidateApply from './pages/website/CandidateApply'
 import Home from './pages/website/Home'
 import SiteLayout from './pages/website/SiteLayout'
 import Contact from './pages/website/Contact'
+import WeeklyIntelligenceReports from './pages/website/WeeklyIntelligenceReports'
+import WhatMakesUsDifferent from './pages/website/WhatMakesUsDifferent'
 
 export default function App() {
   return (
@@ -31,6 +34,8 @@ export default function App() {
           <Route path="jobs" element={<PublicJobs />} />
           <Route path="jobs/:id" element={<JobDetail />} />
           <Route path="apply" element={<CandidateApply />} />
+          <Route path="weekly-intelligence-reports" element={<WeeklyIntelligenceReports />} />
+          <Route path="what-makes-us-different" element={<WhatMakesUsDifferent />} />
           <Route path="contact" element={<Contact />} />
         </Route>
 
@@ -47,6 +52,7 @@ export default function App() {
           <Route path="clients" element={<Clients />} />
           <Route path="clients/:id" element={<ClientDetail />} />
           <Route path="matching" element={<Matching />} />
+          <Route path="cvs" element={<Cvs />} />
           <Route path="geo-mapping" element={<GeoMapping />} />
           <Route path="email" element={<MassEmail />} />
           <Route path="activity" element={<Navigate to="/dashboard" replace />} />

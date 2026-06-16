@@ -1,19 +1,13 @@
-import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  HardHat, Users, Wrench, Truck, Briefcase, FileText, Mail,
-  ChevronLeft, ChevronRight, ArrowRight,
+  Users, Briefcase, FileText, Mail, ArrowRight,
 } from 'lucide-react'
 
 // Construction imagery (swap for your own assets in /public when ready)
 const IMG = {
   professional: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=900&q=80',
-  trades: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=900&q=80',
-  plant: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=900&q=80',
   clients: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=900&q=80',
   candidates: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=900&q=80',
-  payroll: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=900&q=80',
-  testimonial: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1600&q=80',
   heroPoster: '/hero-poster.png',
 }
 
@@ -23,11 +17,8 @@ const HERO_VIDEO = '/hero.mp4?v=2'
 
 const serviceTiles = [
   { label: 'Professional & Technical', icon: Briefcase, img: IMG.professional },
-  { label: 'Labour & Trades', icon: HardHat, img: IMG.trades },
-  { label: 'Plant Operatives', icon: Truck, img: IMG.plant },
   { label: 'Clients', icon: FileText, img: IMG.clients },
   { label: 'Candidates', icon: Users, img: IMG.candidates },
-  { label: 'Payroll & Partners', icon: Wrench, img: IMG.payroll },
 ]
 
 const stats = [
@@ -37,34 +28,7 @@ const stats = [
   { num: '1:1', label: 'Dedicated consultant' },
 ]
 
-const testimonials = [
-  {
-    quote: 'Backfill consistently supply us with reliable, qualified site staff at short notice. Their understanding of our projects and the construction sector sets them apart from other agencies.',
-    author: 'SITE MANAGER · MAJOR CONTRACTOR',
-  },
-  {
-    quote: "From our first conversation, the Backfill team took the time to understand exactly what we needed. Their candidate-focused approach means we get people who genuinely want to be on site.",
-    author: 'OPERATIONS DIRECTOR · RESIDENTIAL DEVELOPER',
-  },
-  {
-    quote: 'Quick turnaround, honest communication, and they actually understand the technical requirements of our roles. That makes a real difference to delivery.',
-    author: 'COMMERCIAL MANAGER · M&E CONTRACTOR',
-  },
-]
-
-const companies = ['McLaren', 'Redrow', 'SDC', 'United Living', 'Vistry Group', 'Willmott Dixon']
-
 export default function Home() {
-  const [testimonial, setTestimonial] = useState(0)
-
-  useEffect(() => {
-    const id = setInterval(() => setTestimonial(t => (t + 1) % testimonials.length), 7000)
-    return () => clearInterval(id)
-  }, [])
-
-  const prev = () => setTestimonial(t => (t - 1 + testimonials.length) % testimonials.length)
-  const next = () => setTestimonial(t => (t + 1) % testimonials.length)
-
   return (
     <>
       {/* ── Hero ── */}
@@ -78,11 +42,12 @@ export default function Home() {
         <div className="hero__content">
           <div className="hero__eyebrow reveal">Specialist Construction Recruitment</div>
           <h1 className="hero__title reveal reveal-d1">
-            Building relationships,<br /><em>constructing the future</em>
+            Project intelligence,<br /><em>driving better hiring decisions</em>
           </h1>
           <p className="hero__sub reveal reveal-d2">
-            We connect the UK's leading contractors, developers and consultancies with the best
-            permanent, freelance and temporary talent in the industry.
+            Backfill combines project intelligence, advanced geo mapping and specialist recruitment
+            expertise to help contractors, developers and consultancies identify opportunities, plan
+            ahead and secure the talent they need to deliver successful projects.
           </p>
           <div className="hero__cta reveal reveal-d3">
             <Link to="/home/jobs" className="site-btn site-btn--gold site-btn--lg">View Vacancies <ArrowRight size={18} /></Link>
@@ -162,36 +127,6 @@ export default function Home() {
               )
             })}
           </div>
-        </div>
-      </section>
-
-      {/* ── Testimonial ── */}
-      <section id="people" className="tmonial">
-        <div className="tmonial__bg" style={{ backgroundImage: `url(${IMG.testimonial})` }} />
-        <div className="tmonial__inner">
-          <div className="tmonial__mark">&ldquo;</div>
-          <p className="tmonial__quote">{testimonials[testimonial].quote}</p>
-          <div className="tmonial__author">{testimonials[testimonial].author}</div>
-          <div className="tmonial__nav">
-            <button className="tmonial__btn" onClick={prev} aria-label="Previous"><ChevronLeft size={20} /></button>
-            <button className="tmonial__btn" onClick={next} aria-label="Next"><ChevronRight size={20} /></button>
-          </div>
-          <div className="tmonial__dots">
-            {testimonials.map((_, i) => (
-              <button key={i} className={`tmonial__dot ${i === testimonial ? 'is-active' : ''}`} onClick={() => setTestimonial(i)} aria-label={`Testimonial ${i + 1}`} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Companies ── */}
-      <section className="site-section" style={{ paddingTop: '5rem', paddingBottom: '5rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <span className="site-kicker" style={{ justifyContent: 'center' }}>Trusted By</span>
-          <h2 className="site-h2" style={{ fontSize: 'clamp(1.4rem, 2.6vw, 1.9rem)' }}>Some of the great companies we work with</h2>
-        </div>
-        <div className="logos">
-          {companies.map(c => <span key={c}>{c}</span>)}
         </div>
       </section>
 

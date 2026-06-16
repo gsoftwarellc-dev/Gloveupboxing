@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Search, MapPin, Calendar, Users, ChevronRight, ChevronLeft } from 'lucide-react'
 import { projects } from '../data/mock'
+import { clientCompanies } from '../data/clients'
 import { useProjectAssignments } from '../utils/projectAssignments'
 
 const PAGE_SIZE = 20
+
+const clientNames = Array.from(new Set(clientCompanies.map(c => c.name).filter(Boolean))).sort()
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   active:  { label: 'Active',  cls: 'badge-green' },
@@ -335,7 +338,10 @@ function AddProjectModal({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Client</label>
-            <select className="input"><option>Balfour Beatty</option><option>Mace Group</option><option>Skanska UK</option></select>
+            <select className="input" defaultValue="">
+              <option value="" disabled>Select a client…</option>
+              {clientNames.map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Contract Value</label>

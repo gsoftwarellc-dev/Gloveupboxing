@@ -8,7 +8,8 @@ const navLinks = [
   { label: 'Jobs', to: '/home/jobs', end: false },
   { label: 'Story', to: '/home#story', hash: true },
   { label: 'Services', to: '/home#services', hash: true },
-  { label: 'People', to: '/home#people', hash: true },
+  { label: 'Weekly Intelligence Reports', headerLabel: 'Weekly Reports', to: '/home/weekly-intelligence-reports', end: false },
+  { label: 'What Makes Us Different?', headerLabel: 'Why Us?', to: '/home/what-makes-us-different', end: false },
   { label: 'Contact', to: '/home/contact', end: false },
 ]
 
@@ -64,7 +65,7 @@ export default function SiteLayout() {
                 <a key={l.label} href={l.to}>{l.label}</a>
               ) : (
                 <NavLink key={l.label} to={l.to} end={l.end} className={({ isActive }) => (isActive ? 'is-current' : '')}>
-                  {l.label}
+                  {l.headerLabel ?? l.label}
                 </NavLink>
               )
             )}

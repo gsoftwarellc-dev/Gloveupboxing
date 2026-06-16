@@ -15,8 +15,8 @@ export default function CandidateApply() {
     firstName: '', lastName: '', email: '', phone: '',
     location: '', postcode: '',
     jobTitle: '', discipline: 'Civil', experience: '', salary: '', noticePeriod: '', travelRadius: '',
-    rightToWork: 'Yes', availability: '',
-    notes: '',
+    rightToWork: 'Yes',
+    cvText: '',
   })
 
   const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }))
@@ -155,14 +155,6 @@ export default function CandidateApply() {
                     <option>10</option><option>20</option><option>30</option><option>50</option><option>Nationwide</option>
                   </select>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontWeight: 600, color: '#000', marginBottom: '0.35rem', fontSize: '0.9rem' }}>Available From</label>
-                  <input style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '0.625rem 0.875rem', fontSize: '1rem', color: '#000', outline: 'none', boxSizing: 'border-box' }} type="date" value={form.availability} onChange={e => update('availability', e.target.value)} />
-                </div>
-                <div style={{ gridColumn: '1/-1' }}>
-                  <label style={{ display: 'block', fontWeight: 600, color: '#000', marginBottom: '0.35rem', fontSize: '0.9rem' }}>About You</label>
-                  <textarea style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '0.625rem 0.875rem', fontSize: '1rem', color: '#000', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} rows={4} placeholder="Brief summary of your experience and what you're looking for..." value={form.notes} onChange={e => update('notes', e.target.value)} />
-                </div>
               </div>
             </div>
           )}
@@ -215,6 +207,20 @@ export default function CandidateApply() {
               <div style={{ marginTop: '1rem', padding: '0.875rem', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: '8px', fontSize: '0.9rem', color: '#059669' }}>
                 ✓ Your CV will be stored securely and only shared with your consent.
               </div>
+
+              <div style={{ marginTop: '1.5rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, color: '#000', marginBottom: '0.35rem', fontSize: '0.9rem' }}>Or paste your CV text</label>
+                <p style={{ margin: '0 0 0.5rem', color: '#6b7280', fontSize: '0.85rem' }}>
+                  Prefer not to upload a file? Paste your CV here and we can review it straight away.
+                </p>
+                <textarea
+                  rows={8}
+                  placeholder="Paste your full CV here..."
+                  value={form.cvText}
+                  onChange={e => update('cvText', e.target.value)}
+                  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '7px', padding: '0.75rem 0.875rem', fontSize: '0.95rem', color: '#000', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
+                />
+              </div>
             </div>
           )}
 
@@ -223,7 +229,7 @@ export default function CandidateApply() {
               <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.15rem', fontWeight: 700, color: '#000' }}>Review Your Application</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {[
-                  { title: 'Personal Details', items: [{ label: 'Name', value: `${form.firstName} ${form.lastName}` || '—' }, { label: 'Email', value: form.email || '—' }, { label: 'Phone', value: form.phone || '—' }, { label: 'Location', value: form.location || '—' }] },
+                  { title: 'Personal Details', items: [{ label: 'Name', value: `${form.firstName} ${form.lastName}`.trim() || '—' }, { label: 'Email', value: form.email || '—' }, { label: 'Phone', value: form.phone || '—' }, { label: 'Location', value: form.location || '—' }] },
                   { title: 'Work Experience', items: [{ label: 'Role', value: form.jobTitle || '—' }, { label: 'Discipline', value: form.discipline }, { label: 'Experience', value: form.experience ? `${form.experience} years` : '—' }, { label: 'Salary', value: form.salary || '—' }, { label: 'Notice Period', value: form.noticePeriod || '—' }] },
                   { title: 'Certificates', items: [{ label: 'Selected', value: certs.length > 0 ? certs.join(', ') : 'None selected' }] },
                 ].map(section => (
