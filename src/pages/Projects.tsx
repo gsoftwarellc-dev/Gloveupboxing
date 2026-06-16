@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, MapPin, Calendar, Users, ChevronRight, ChevronLeft } from 'lucide-react'
-import { projects } from '../data/mock'
+import { Plus, Search, MapPin, Calendar, Users, ChevronRight, ChevronLeft, ClipboardPaste, Sparkles, X, Trash2 } from 'lucide-react'
+import { projects as initialProjects, type Project } from '../data/mock'
 import { clientCompanies } from '../data/clients'
 import { useProjectAssignments } from '../utils/projectAssignments'
+import { parseProjects, AI_ENABLED, type ParsedProject } from '../utils/aiClient'
 
 const PAGE_SIZE = 20
 
@@ -40,8 +41,10 @@ function valueToMillions(v: string | number): number {
 }
 
 export default function Projects() {
+  const [projects, setProjects] = useState<Project[]>(() => initialProjects.map(p => ({ ...p })))
   const [search, setSearch] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showPasteModal, setShowPasteModal] = useState(false)
   const [page, setPage] = useState(1)
   const [sortBy, setSortBy] = useState<SortKey>('score')
   const [recruitmentFilter, setRecruitmentFilter] = useState<RecruitmentFilter>('all')
@@ -49,6 +52,30 @@ export default function Projects() {
   const [dateTo, setDateTo] = useState('')
 
   const assignments = useProjectAssignments()
+
+  function addProjects(parsed: ParsedProject[]) {
+    setProjects(prev => {
+      let nextId = prev.reduce((max, p) => Math.max(max, p.id), 0)
+      const additions: Project[] = parsed.map(p => ({
+        id: ++nextId,
+        name: p.name,
+        client: p.client ?? '',
+        location: p.location ?? '',
+        postcode: p.postcode ?? '',
+        status: 'tender',
+        stage: p.stage ?? '',
+        startDate: p.startDate ?? '',
+        endDate: '',
+        value: p.value ?? '',
+        rolesNeeded: 0,
+        contacts: [],
+        opportunityScore: 0,
+        sector: p.sector,
+      }))
+      return [...additions, ...prev]
+    })
+    setPage(1)
+  }
 
   const filtered = projects
     .filter(p => {
@@ -126,7 +153,10 @@ export default function Projects() {
           <h1 className="page-title">Project Intelligence</h1>
           <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '0.2rem 0 0' }}>Track construction projects and recruitment opportunities</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowAddModal(true)}><Plus size={14} />Add Project</button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button className="btn-secondary" onClick={() => setShowPasteModal(true)}><ClipboardPaste size={14} />Paste Data</button>
+          <button className="btn-primary" onClick={() => setShowAddModal(true)}><Plus size={14} />Add Project</button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -319,6 +349,13 @@ export default function Projects() {
       )}
 
       {showAddModal && <AddProjectModal onClose={() => setShowAddModal(false)} />}
+      {showPasteModal && (
+        <PasteProjectsModal
+          existing={projects}
+          onClose={() => setShowPasteModal(false)}
+          onImport={addProjects}
+        />
+      )}
     </div>
   )
 }
@@ -375,6 +412,119 @@ function AddProjectModal({ onClose }: { onClose: () => void }) {
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn-primary" onClick={onClose}>Add Project</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PasteProjectsModal({
+  existing,
+  onClose,
+  onImport,
+}: {
+  existing: Project[]
+  onClose: () => void
+  onImport: (projects: ParsedProject[]) => void
+}) {
+  const [raw, setRaw] = useState('')
+  const [parsing, setParsing] = useState(false)
+  const [parsed, setParsed] = useState<ParsedProject[] | null>(null)
+
+  const existingNames = new Set(existing.map(p => p.name.toLowerCase()))
+
+  async function runParse() {
+    if (!raw.trim()) return
+    setParsing(true)
+    setParsed(null)
+    try {
+      setParsed(await parseProjects(raw))
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  function removeRow(idx: number) {
+    setParsed(prev => (prev ? prev.filter((_, i) => i !== idx) : prev))
+  }
+
+  const importable = parsed?.filter(p => !existingNames.has(p.name.toLowerCase())) ?? []
+  const duplicates = (parsed?.length ?? 0) - importable.length
+
+  function confirmImport() {
+    if (importable.length) onImport(importable)
+    onClose()
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: '760px' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h2 className="section-title">Paste Project Data</h2>
+          <button className="btn-ghost" style={{ padding: '0.25rem' }} onClick={onClose}><X size={16} /></button>
+        </div>
+
+        {!AI_ENABLED && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.875rem', background: 'rgba(184,148,46,0.08)', border: '1px solid rgba(184,148,46,0.25)', borderRadius: '0.5rem', fontSize: '0.85rem', color: '#8a6d1f', marginBottom: '1rem' }}>
+            <Sparkles size={15} />
+            Preview mode: structured on-device. Works best with spreadsheet rows (paste straight from Excel/Sheets). Connect an AI backend later for messy free-text.
+          </div>
+        )}
+
+        <p style={{ margin: '0 0 0.5rem', color: '#6b7280', fontSize: '0.85rem' }}>
+          Paste rows copied from a spreadsheet. A header row (Project, Client, Location, Postcode, Value, Sector, Stage, Start) helps accuracy but isn't required.
+        </p>
+        <textarea
+          className="input"
+          rows={7}
+          style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.82rem' }}
+          placeholder={'Project\tClient\tLocation\tPostcode\tValue\tSector\nChrist’s College Library\tBarnes Construction\tCambridge\tCB2 3BU\t£20m\tEducation'}
+          value={raw}
+          onChange={e => setRaw(e.target.value)}
+        />
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+          <button className="btn-secondary" onClick={runParse} disabled={parsing || !raw.trim()}>
+            <Sparkles size={14} />{parsing ? 'Reading…' : 'Detect Projects'}
+          </button>
+        </div>
+
+        {parsed && (
+          <div style={{ marginTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <div className="label">Detected {parsed.length} project{parsed.length !== 1 ? 's' : ''}</div>
+              {duplicates > 0 && <span style={{ fontSize: '0.78rem', color: '#dc2626' }}>{duplicates} already exist (will be skipped)</span>}
+            </div>
+            {parsed.length === 0 && (
+              <div style={{ padding: '1rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem', background: '#f8f9fb', borderRadius: '0.5rem' }}>
+                Couldn't detect any projects. Check the pasted format.
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '34vh', overflowY: 'auto' }}>
+              {parsed.map((p, idx) => {
+                const dup = existingNames.has(p.name.toLowerCase())
+                const meta = [p.client, p.location || p.postcode, p.value, p.sector, p.stage].filter(Boolean).join(' · ')
+                return (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem 0.875rem', background: dup ? 'rgba(248,113,113,0.05)' : '#f8f9fb', border: '1px solid #e8eaf0', borderRadius: '0.5rem', opacity: dup ? 0.65 : 1 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: '#111', fontSize: '0.9rem' }}>
+                        {p.name}{dup && <span style={{ color: '#dc2626', fontWeight: 500, fontSize: '0.78rem' }}> · duplicate</span>}
+                      </div>
+                      {meta && <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.2rem' }}>{meta}</div>}
+                    </div>
+                    <button className="btn-ghost" style={{ padding: '0.2rem', color: '#9ca3af' }} onClick={() => removeRow(idx)} title="Remove"><Trash2 size={14} /></button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" onClick={confirmImport} disabled={importable.length === 0}>
+            Add {importable.length || ''} Project{importable.length !== 1 ? 's' : ''}
+          </button>
         </div>
       </div>
     </div>

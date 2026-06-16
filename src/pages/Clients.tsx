@@ -1,23 +1,47 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Building2, Users, ChevronRight, ChevronLeft } from 'lucide-react'
-import { clientCompanies } from '../data/clients'
+import { Search, Building2, Users, ChevronRight, ChevronLeft, Plus, X, ClipboardPaste, Sparkles, Trash2 } from 'lucide-react'
+import { clientCompanies, type ClientCompany } from '../data/clients'
 import { findRelatedProjects } from '../utils/clientMatching'
+import { parseClients, AI_ENABLED, type ParsedClient } from '../utils/aiClient'
 
 const PAGE_SIZE = 24
 
-const ALL_DISCIPLINES = Array.from(
-  new Set(clientCompanies.flatMap(c => c.disciplines))
-).sort()
-
 export default function Clients() {
+  const [companies, setCompanies] = useState<ClientCompany[]>(() => clientCompanies.map(c => ({ ...c })))
   const [search, setSearch] = useState('')
   const [discipline, setDiscipline] = useState('all')
   const [page, setPage] = useState(1)
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showPasteModal, setShowPasteModal] = useState(false)
 
-  const filtered = clientCompanies.filter(c => {
+  const ALL_DISCIPLINES = useMemo(
+    () => Array.from(new Set(companies.flatMap(c => c.disciplines))).sort(),
+    [companies]
+  )
+
+  function addClient(company: ClientCompany) {
+    setCompanies(prev => [company, ...prev])
+    setPage(1)
+  }
+
+  function addClients(parsed: ParsedClient[]) {
+    setCompanies(prev => {
+      let nextId = prev.reduce((max, c) => Math.max(max, c.id), 0)
+      const additions: ClientCompany[] = parsed.map(p => ({
+        id: ++nextId,
+        name: p.name,
+        disciplines: p.disciplines.length ? p.disciplines : ['General'],
+        contacts: p.contacts,
+      }))
+      return [...additions, ...prev]
+    })
+    setPage(1)
+  }
+
+  const filtered = companies.filter(c => {
     const q = search.toLowerCase()
     const matchesSearch = !q ||
       c.name.toLowerCase().includes(q) ||
@@ -40,23 +64,29 @@ export default function Clients() {
   const currentPage = Math.min(page, totalPages)
   const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
 
-  const totalContacts = clientCompanies.reduce((sum, c) => sum + c.contacts.length, 0)
+  const totalContacts = companies.reduce((sum, c) => sum + c.contacts.length, 0)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
       {/* Header */}
-      <div>
-        <h1 className="page-title">Clients</h1>
-        <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '0.2rem 0 0' }}>
-          Companies and contacts you've worked with, organized by trade
-        </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 className="page-title">Clients</h1>
+          <p style={{ color: '#6b7280', fontSize: '0.9rem', margin: '0.2rem 0 0' }}>
+            Companies and contacts you've worked with, organized by trade
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button className="btn-secondary" onClick={() => setShowPasteModal(true)}><ClipboardPaste size={15} />Paste Data</button>
+          <button className="btn-primary" onClick={() => setShowAddModal(true)}><Plus size={15} />Add Client</button>
+        </div>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
         {[
-          { label: 'Companies', value: clientCompanies.length },
+          { label: 'Companies', value: companies.length },
           { label: 'Contacts', value: totalContacts },
           { label: 'Trade Categories', value: ALL_DISCIPLINES.length },
         ].map(s => (
@@ -211,6 +241,281 @@ export default function Clients() {
           </div>
         </div>
       )}
+
+      {showAddModal && (
+        <AddClientModal
+          existing={companies}
+          knownDisciplines={ALL_DISCIPLINES}
+          onClose={() => setShowAddModal(false)}
+          onAdd={addClient}
+        />
+      )}
+
+      {showPasteModal && (
+        <PasteClientsModal
+          existing={companies}
+          onClose={() => setShowPasteModal(false)}
+          onImport={addClients}
+        />
+      )}
+    </div>
+  )
+}
+
+function PasteClientsModal({
+  existing,
+  onClose,
+  onImport,
+}: {
+  existing: ClientCompany[]
+  onClose: () => void
+  onImport: (clients: ParsedClient[]) => void
+}) {
+  const [raw, setRaw] = useState('')
+  const [parsing, setParsing] = useState(false)
+  const [parsed, setParsed] = useState<ParsedClient[] | null>(null)
+
+  const existingNames = useMemo(
+    () => new Set(existing.map(c => c.name.toLowerCase())),
+    [existing]
+  )
+
+  async function runParse() {
+    if (!raw.trim()) return
+    setParsing(true)
+    setParsed(null)
+    try {
+      setParsed(await parseClients(raw))
+    } finally {
+      setParsing(false)
+    }
+  }
+
+  function removeRow(idx: number) {
+    setParsed(prev => (prev ? prev.filter((_, i) => i !== idx) : prev))
+  }
+
+  const importable = parsed?.filter(p => !existingNames.has(p.name.toLowerCase())) ?? []
+  const duplicates = (parsed?.length ?? 0) - importable.length
+
+  function confirmImport() {
+    if (importable.length) onImport(importable)
+    onClose()
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: '720px' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h2 className="section-title">Paste Client Data</h2>
+          <button className="btn-ghost" style={{ padding: '0.25rem' }} onClick={onClose}><X size={16} /></button>
+        </div>
+
+        {!AI_ENABLED && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 0.875rem', background: 'rgba(184,148,46,0.08)', border: '1px solid rgba(184,148,46,0.25)', borderRadius: '0.5rem', fontSize: '0.85rem', color: '#8a6d1f', marginBottom: '1rem' }}>
+            <Sparkles size={15} />
+            Preview mode: structured on-device. Works best with spreadsheet rows (paste straight from Excel/Sheets). Connect an AI backend later for messy free-text.
+          </div>
+        )}
+
+        <p style={{ margin: '0 0 0.5rem', color: '#6b7280', fontSize: '0.85rem' }}>
+          Paste rows copied from a spreadsheet. A header row (Company, Name, Role, Email, Phone, Trade) helps accuracy but isn't required.
+        </p>
+        <textarea
+          className="input"
+          rows={7}
+          style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.82rem' }}
+          placeholder={'Company\tName\tRole\tEmail\tPhone\nBarnes Construction\tAlex Hewet\tQuantity Surveyor\tahewet@barnes.co.uk\t07700 900123'}
+          value={raw}
+          onChange={e => setRaw(e.target.value)}
+        />
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+          <button className="btn-secondary" onClick={runParse} disabled={parsing || !raw.trim()}>
+            <Sparkles size={14} />{parsing ? 'Reading…' : 'Detect Clients'}
+          </button>
+        </div>
+
+        {parsed && (
+          <div style={{ marginTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <div className="label">Detected {parsed.length} client{parsed.length !== 1 ? 's' : ''}</div>
+              {duplicates > 0 && <span style={{ fontSize: '0.78rem', color: '#dc2626' }}>{duplicates} already exist (will be skipped)</span>}
+            </div>
+            {parsed.length === 0 && (
+              <div style={{ padding: '1rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem', background: '#f8f9fb', borderRadius: '0.5rem' }}>
+                Couldn't detect any clients. Check the pasted format.
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '34vh', overflowY: 'auto' }}>
+              {parsed.map((p, idx) => {
+                const dup = existingNames.has(p.name.toLowerCase())
+                return (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem 0.875rem', background: dup ? 'rgba(248,113,113,0.05)' : '#f8f9fb', border: '1px solid #e8eaf0', borderRadius: '0.5rem', opacity: dup ? 0.65 : 1 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, color: '#111', fontSize: '0.9rem' }}>
+                        {p.name}{dup && <span style={{ color: '#dc2626', fontWeight: 500, fontSize: '0.78rem' }}> · duplicate</span>}
+                      </div>
+                      {p.disciplines.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', margin: '0.3rem 0' }}>
+                          {p.disciplines.map(d => <span key={d} className="badge badge-gray" style={{ fontSize: '0.68rem' }}>{d}</span>)}
+                        </div>
+                      )}
+                      {p.contacts.map((ct, ci) => (
+                        <div key={ci} style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                          {[ct.name, ct.role, ct.email, ct.phone].filter(Boolean).join(' · ')}
+                        </div>
+                      ))}
+                    </div>
+                    <button className="btn-ghost" style={{ padding: '0.2rem', color: '#9ca3af' }} onClick={() => removeRow(idx)} title="Remove"><Trash2 size={14} /></button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" onClick={confirmImport} disabled={importable.length === 0}>
+            Add {importable.length || ''} Client{importable.length !== 1 ? 's' : ''}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AddClientModal({
+  existing,
+  knownDisciplines,
+  onClose,
+  onAdd,
+}: {
+  existing: ClientCompany[]
+  knownDisciplines: string[]
+  onClose: () => void
+  onAdd: (company: ClientCompany) => void
+}) {
+  const [name, setName] = useState('')
+  const [disciplines, setDisciplines] = useState('')
+  const [contactName, setContactName] = useState('')
+  const [contactRole, setContactRole] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+  const [error, setError] = useState('')
+
+  function toggleDiscipline(d: string) {
+    setDisciplines(prev => {
+      const list = prev.split(',').map(s => s.trim()).filter(Boolean)
+      const next = list.includes(d) ? list.filter(x => x !== d) : [...list, d]
+      return next.join(', ')
+    })
+  }
+
+  function save() {
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      setError('Company name is required.')
+      return
+    }
+    if (existing.some(c => c.name.toLowerCase() === trimmedName.toLowerCase())) {
+      setError('A client with this name already exists.')
+      return
+    }
+
+    const disciplineList = disciplines.split(',').map(s => s.trim()).filter(Boolean)
+    const contacts: ClientCompany['contacts'] = []
+    if (contactName.trim()) {
+      contacts.push({
+        name: contactName.trim(),
+        role: contactRole.trim() || undefined,
+        email: contactEmail.trim() || undefined,
+        phone: contactPhone.trim() || undefined,
+      })
+    }
+
+    const nextId = existing.reduce((max, c) => Math.max(max, c.id), 0) + 1
+    onAdd({
+      id: nextId,
+      name: trimmedName,
+      disciplines: disciplineList.length ? disciplineList : ['General'],
+      contacts,
+    })
+    onClose()
+  }
+
+  const inputStyle = { fontSize: '0.9rem' } as const
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+          <h2 className="section-title">Add Client</h2>
+          <button className="btn-ghost" style={{ padding: '0.25rem' }} onClick={onClose}><X size={16} /></button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.875rem' }}>
+          <div style={{ gridColumn: '1/-1' }}>
+            <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Company Name *</label>
+            <input className="input" style={inputStyle} placeholder="e.g. Barnes Construction Limited" value={name} onChange={e => { setName(e.target.value); setError('') }} />
+          </div>
+
+          <div style={{ gridColumn: '1/-1' }}>
+            <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Trades / Disciplines</label>
+            <input className="input" style={inputStyle} placeholder="Comma-separated, e.g. Groundworks, Civil" value={disciplines} onChange={e => setDisciplines(e.target.value)} />
+            {knownDisciplines.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.5rem' }}>
+                {knownDisciplines.slice(0, 14).map(d => {
+                  const active = disciplines.split(',').map(s => s.trim()).includes(d)
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      className="badge badge-gray"
+                      style={{ cursor: 'pointer', border: active ? '1px solid #b8942e' : 'none', background: active ? 'rgba(184,148,46,0.1)' : undefined, color: active ? '#b8942e' : undefined, fontSize: '0.7rem' }}
+                      onClick={() => toggleDiscipline(d)}
+                    >
+                      {d}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          <div style={{ gridColumn: '1/-1', borderTop: '1px solid #eef0f4', paddingTop: '0.75rem', fontWeight: 700, color: '#0f172a', fontSize: '0.85rem' }}>
+            Primary Contact (optional)
+          </div>
+          <div>
+            <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Contact Name</label>
+            <input className="input" style={inputStyle} placeholder="e.g. Alex Hewet" value={contactName} onChange={e => setContactName(e.target.value)} />
+          </div>
+          <div>
+            <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Role</label>
+            <input className="input" style={inputStyle} placeholder="e.g. Quantity Surveyor" value={contactRole} onChange={e => setContactRole(e.target.value)} />
+          </div>
+          <div>
+            <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Email</label>
+            <input className="input" style={inputStyle} type="email" placeholder="name@company.co.uk" value={contactEmail} onChange={e => setContactEmail(e.target.value)} />
+          </div>
+          <div>
+            <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Phone</label>
+            <input className="input" style={inputStyle} placeholder="07700 000000" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ marginTop: '0.875rem', padding: '0.6rem 0.875rem', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: '0.5rem', fontSize: '0.85rem', color: '#dc2626' }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" onClick={save}>Add Client</button>
+        </div>
+      </div>
     </div>
   )
 }
