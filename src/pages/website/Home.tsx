@@ -23,8 +23,7 @@ const serviceTiles = [
 
 const stats = [
   { num: '100%', label: 'Construction focused' },
-  { num: 'UK', label: 'Nationwide coverage' },
-  { num: '24h', label: 'Response time' },
+  { num: 'UK & International', label: 'Coverage' },
   { num: '1:1', label: 'Dedicated consultant' },
 ]
 
@@ -41,8 +40,14 @@ export default function Home() {
         <div className="hero__overlay" />
         <div className="hero__content">
           <div className="hero__eyebrow reveal">Specialist Construction Recruitment</div>
-          <h1 className="hero__title reveal reveal-d1">
-            Project intelligence,<br /><em>driving better hiring decisions</em>
+          <h1 className="hero__title hero__title--words">
+            <span className="hero__word"><span className="hero__word-in" style={{ '--d': '0.10s' } as React.CSSProperties}>Project</span></span>{' '}
+            <span className="hero__word"><span className="hero__word-in" style={{ '--d': '0.20s' } as React.CSSProperties}>intelligence,</span></span>
+            <br />
+            <span className="hero__word"><span className="hero__word-in hero__title-accent" style={{ '--d': '0.34s' } as React.CSSProperties}>driving</span></span>{' '}
+            <span className="hero__word"><span className="hero__word-in hero__title-accent" style={{ '--d': '0.44s' } as React.CSSProperties}>better</span></span>{' '}
+            <span className="hero__word"><span className="hero__word-in hero__title-accent" style={{ '--d': '0.54s' } as React.CSSProperties}>hiring</span></span>{' '}
+            <span className="hero__word"><span className="hero__word-in hero__title-accent" style={{ '--d': '0.64s' } as React.CSSProperties}>decisions</span></span>
           </h1>
           <p className="hero__sub reveal reveal-d2">
             Backfill combines project intelligence, advanced geo mapping and specialist recruitment
@@ -65,7 +70,7 @@ export default function Home() {
         <div className="statbar__inner">
           {stats.map(s => (
             <div key={s.label} className="statbar__item">
-              <div className="statbar__num">{s.num}</div>
+              <div className="statbar__num" style={s.num.length > 6 ? { fontSize: '1.6rem' } : undefined}>{s.num}</div>
               <div className="statbar__label">{s.label}</div>
             </div>
           ))}
@@ -78,24 +83,23 @@ export default function Home() {
           <div>
             <span className="site-kicker">Our Story</span>
             <h2 className="site-h2">
-              A fresh, independent construction recruitment agency.
+              Built From Real Construction Experience
             </h2>
             <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#161c2d', marginTop: '1.5rem', lineHeight: 1.6 }}>
-              We supply temporary, freelance &amp; permanent staff to the construction and associated
-              industries — based across the UK, working on a national scale.
+              Backfill Construction Recruitment was founded on first-hand experience within the
+              construction industry.
             </p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', color: '#4a5160', fontSize: '1rem', lineHeight: 1.8, paddingTop: '0.5rem' }}>
             <p style={{ margin: 0 }}>
-              We provide innovative recruitment solutions, with core values built on being
-              candidate-focussed and client-driven. We pride ourselves on a service that exceeds
-              expectations, with our sole focus on the construction sector — so all of our effort goes
-              into one marketplace.
+              Before entering recruitment, our founder spent years working on site, from digging out
+              footings by hand and mixing concrete in wheelbarrows to working within groundworks and
+              landscaping projects across the UK.
             </p>
             <p style={{ margin: 0 }}>
-              Our consultants look after designated regions, combining genuine local knowledge with
-              national reach. That gives us strength in depth and a real understanding of the
-              operational, regulatory and market constraints our clients work within.
+              That experience provided a genuine understanding of the challenges construction
+              businesses face every day — labour shortages, tight programmes, project deadlines and
+              the importance of having the right people in the right roles.
             </p>
             <a href="#services" style={{ color: '#b8942e', fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem' }}>
               Explore our services <ArrowRight size={16} />
