@@ -9,6 +9,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      SITE_URL: https://www.backfillconstruction.co.uk
 
     steps:
       - name: Checkout code
@@ -55,14 +57,24 @@ jobs:
           local_path: './.htaccess'
           remote_path: ${{ secrets.FTP_TARGET }}
 
-      - name: Deploy backend routing files to IONOS
+      - name: Deploy backend index to IONOS
         uses: wlixcc/SFTP-Deploy-Action@v1.2.5
         with:
           username: ${{ secrets.FTP_USERNAME }}
           server: ${{ secrets.FTP_HOST }}
           port: 22
           password: ${{ secrets.FTP_PASSWORD }}
-          local_path: './backend/root/*'
+          local_path: './backend/root/index.php'
+          remote_path: ${{ secrets.FTP_TARGET }}/backend
+
+      - name: Deploy backend htaccess to IONOS
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.5
+        with:
+          username: ${{ secrets.FTP_USERNAME }}
+          server: ${{ secrets.FTP_HOST }}
+          port: 22
+          password: ${{ secrets.FTP_PASSWORD }}
+          local_path: './backend/root/.htaccess'
           remote_path: ${{ secrets.FTP_TARGET }}/backend
 
       - name: Deploy Laravel app to IONOS
@@ -74,3 +86,34 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local_path: './backend/laravel/*'
           remote_path: ${{ secrets.FTP_TARGET }}/backend/laravel
+
+      - name: Prepare Laravel runtime and refresh caches
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+            APP_PATH="${{ secrets.FTP_TARGET }}/backend/laravel"
+            mkdir -p "$APP_PATH/storage/framework/views"
+            mkdir -p "$APP_PATH/storage/framework/cache"
+            mkdir -p "$APP_PATH/storage/framework/sessions"
+            mkdir -p "$APP_PATH/storage/logs"
+            mkdir -p "$APP_PATH/bootstrap/cache"
+            if [ ! -f "$APP_PATH/.env" ]; then
+              echo "Missing production .env at $APP_PATH/.env"
+              exit 1
+            fi
+            cd "$APP_PATH"
+            php8.3 artisan optimize:clear
+            php8.3 artisan config:cache
+            php8.3 artisan route:cache
+            php8.3 artisan view:cache
+
+      - name: Smoke test production
+        run: |
+          curl --fail --silent --show-error "$SITE_URL/backend/api/health"
+          curl --fail --silent --show-error --head "$SITE_URL"
