@@ -9,14 +9,11 @@ This repo is set up for one-way deployment from GitHub to IONOS:
 
 ## GitHub Actions secrets
 
-Create these repository secrets in GitHub:
+Create this repository secret in GitHub:
 
-- `FTP_HOST`
-- `FTP_USERNAME`
 - `FTP_PASSWORD`
-- `FTP_TARGET`
 
-`FTP_TARGET` should point to the IONOS public web root, for example `/home/www/public`.
+The workflow hardcodes the IONOS SSH host, username, frontend web root, and the live backend path.
 
 ## IONOS database
 
@@ -35,5 +32,6 @@ On every push to `main`, GitHub Actions will:
 1. Install frontend dependencies.
 2. Build the frontend.
 3. Install Laravel dependencies.
-4. Upload the frontend, root `.htaccess`, and backend files to IONOS.
-
+4. Upload the frontend and root `.htaccess` to `/home/www/public`.
+5. Upload the Laravel backend to `/home/www/clickandbuilds/BackfillConstructionRecruitment/backend`.
+6. Clear stale Laravel cache files on IONOS and rebuild config, route, and view caches.

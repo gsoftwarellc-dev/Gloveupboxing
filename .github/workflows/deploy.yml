@@ -10,6 +10,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
+      IONOS_BACKEND_TARGET: /home/www/clickandbuilds/BackfillConstructionRecruitment/backend
       IONOS_HOST: access-5020603051.webspace-host.com
       IONOS_TARGET: /home/www/public
       IONOS_USERNAME: su266029
@@ -77,8 +78,8 @@ jobs:
             "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}" "
             set -e
             mkdir -p '${{ steps.deploy.outputs.target }}'
-            mkdir -p '${{ steps.deploy.outputs.target }}/backend'
-            mkdir -p '${{ steps.deploy.outputs.target }}/backend/laravel'
+            mkdir -p '${{ env.IONOS_BACKEND_TARGET }}'
+            mkdir -p '${{ env.IONOS_BACKEND_TARGET }}/laravel'
           "
 
       - name: Deploy frontend build to IONOS
@@ -99,10 +100,10 @@ jobs:
         run: |
           sshpass -f "${{ steps.deploy.outputs.password_file }}" rsync -az \
             -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22" \
-            ./backend/root/index.php "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ steps.deploy.outputs.target }}/backend/index.php"
+            ./backend/root/index.php "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ env.IONOS_BACKEND_TARGET }}/index.php"
           sshpass -f "${{ steps.deploy.outputs.password_file }}" rsync -az \
             -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22" \
-            ./backend/root/.htaccess "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ steps.deploy.outputs.target }}/backend/.htaccess"
+            ./backend/root/.htaccess "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ env.IONOS_BACKEND_TARGET }}/.htaccess"
 
       - name: Deploy Laravel app to IONOS
         run: |
@@ -111,7 +112,7 @@ jobs:
             --exclude 'storage/' \
             --exclude 'bootstrap/cache/*.php' \
             -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22" \
-            ./backend/laravel/ "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ steps.deploy.outputs.target }}/backend/laravel/"
+            ./backend/laravel/ "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ env.IONOS_BACKEND_TARGET }}/laravel/"
 
       - name: Prepare Laravel runtime and refresh caches
         run: |
@@ -121,7 +122,7 @@ jobs:
             -p 22 \
             "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}" "
             set -e
-            APP_PATH='${{ steps.deploy.outputs.target }}/backend/laravel'
+            APP_PATH='${{ env.IONOS_BACKEND_TARGET }}/laravel'
             mkdir -p \"\$APP_PATH/storage/framework/views\"
             mkdir -p \"\$APP_PATH/storage/framework/cache\"
             mkdir -p \"\$APP_PATH/storage/framework/sessions\"
@@ -131,6 +132,7 @@ jobs:
               echo \"Missing production .env at \$APP_PATH/.env\"
               exit 1
             fi
+            rm -f \"\$APP_PATH/bootstrap/cache/\"*.php
             cd \"\$APP_PATH\"
             php8.3 artisan optimize:clear
             php8.3 artisan config:cache
