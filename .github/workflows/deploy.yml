@@ -35,103 +35,114 @@ jobs:
 
       - name: Install backend dependencies
         working-directory: backend/laravel
-        run: composer install --no-dev --prefer-dist --optimize-autoloader
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-scripts
 
       - name: Install SSH deploy tools
-        run: sudo apt-get update && sudo apt-get install -y sshpass
+        run: sudo apt-get update && sudo apt-get install -y rsync sshpass
 
-      - name: Prepare remote directories
+      - name: Normalize deploy settings
+        id: deploy
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_TARGET: ${{ secrets.FTP_TARGET }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         run: |
-          sshpass -p "$FTP_PASSWORD" ssh -o StrictHostKeyChecking=no -p 22 "$FTP_USERNAME@$FTP_HOST" "
-            mkdir -p '$FTP_TARGET'
-            mkdir -p '$FTP_TARGET/backend'
-            mkdir -p '$FTP_TARGET/backend/laravel'
+          set -euo pipefail
+          HOST="$(printf '%s' "$FTP_HOST" | tr -d '\r\n')"
+          USERNAME="$(printf '%s' "$FTP_USERNAME" | tr -d '\r\n')"
+          TARGET="$(printf '%s' "$FTP_TARGET" | tr -d '\r\n')"
+          PASSWORD="$(printf '%s' "$FTP_PASSWORD" | tr -d '\r\n')"
+          PASSWORD_FILE="$RUNNER_TEMP/ionos-password"
+
+          if [ -z "$HOST" ] || [ -z "$USERNAME" ] || [ -z "$TARGET" ] || [ -z "$PASSWORD" ]; then
+            echo "Missing one or more required deploy secrets: FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_TARGET."
+            exit 1
+          fi
+
+          printf '%s' "$PASSWORD" > "$PASSWORD_FILE"
+          chmod 600 "$PASSWORD_FILE"
+
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+          echo "username=$USERNAME" >> "$GITHUB_OUTPUT"
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "password_file=$PASSWORD_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare remote directories
+        run: |
+          sshpass -f "${{ steps.deploy.outputs.password_file }}" ssh \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -p 22 \
+            "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}" "
+            set -e
+            mkdir -p '${{ steps.deploy.outputs.target }}'
+            mkdir -p '${{ steps.deploy.outputs.target }}/backend'
+            mkdir -p '${{ steps.deploy.outputs.target }}/backend/laravel'
           "
 
       - name: Deploy frontend build to IONOS
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_TARGET: ${{ secrets.FTP_TARGET }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         run: |
-          sshpass -p "$FTP_PASSWORD" rsync -az --delete \
+          sshpass -f "${{ steps.deploy.outputs.password_file }}" rsync -az --delete \
             --exclude 'backend' \
             --exclude '.htaccess' \
-            -e "ssh -o StrictHostKeyChecking=no -p 22" \
-            dist/ "$FTP_USERNAME@$FTP_HOST:$FTP_TARGET/"
+            -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22" \
+            dist/ "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ steps.deploy.outputs.target }}/"
 
       - name: Deploy root htaccess to IONOS
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_TARGET: ${{ secrets.FTP_TARGET }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         run: |
-          sshpass -p "$FTP_PASSWORD" rsync -az \
-            -e "ssh -o StrictHostKeyChecking=no -p 22" \
-            ./.htaccess "$FTP_USERNAME@$FTP_HOST:$FTP_TARGET/.htaccess"
+          sshpass -f "${{ steps.deploy.outputs.password_file }}" rsync -az \
+            -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22" \
+            ./.htaccess "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ steps.deploy.outputs.target }}/.htaccess"
 
       - name: Deploy backend routing files to IONOS
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_TARGET: ${{ secrets.FTP_TARGET }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         run: |
-          sshpass -p "$FTP_PASSWORD" rsync -az \
-            -e "ssh -o StrictHostKeyChecking=no -p 22" \
-            ./backend/root/index.php "$FTP_USERNAME@$FTP_HOST:$FTP_TARGET/backend/index.php"
-          sshpass -p "$FTP_PASSWORD" rsync -az \
-            -e "ssh -o StrictHostKeyChecking=no -p 22" \
-            ./backend/root/.htaccess "$FTP_USERNAME@$FTP_HOST:$FTP_TARGET/backend/.htaccess"
+          sshpass -f "${{ steps.deploy.outputs.password_file }}" rsync -az \
+            -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22" \
+            ./backend/root/index.php "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ steps.deploy.outputs.target }}/backend/index.php"
+          sshpass -f "${{ steps.deploy.outputs.password_file }}" rsync -az \
+            -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22" \
+            ./backend/root/.htaccess "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ steps.deploy.outputs.target }}/backend/.htaccess"
 
       - name: Deploy Laravel app to IONOS
-        env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_TARGET: ${{ secrets.FTP_TARGET }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         run: |
-          sshpass -p "$FTP_PASSWORD" rsync -az --delete \
+          sshpass -f "${{ steps.deploy.outputs.password_file }}" rsync -az --delete \
             --exclude '.env' \
             --exclude 'storage/' \
             --exclude 'bootstrap/cache/*.php' \
-            -e "ssh -o StrictHostKeyChecking=no -p 22" \
-            ./backend/laravel/ "$FTP_USERNAME@$FTP_HOST:$FTP_TARGET/backend/laravel/"
+            -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22" \
+            ./backend/laravel/ "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}:${{ steps.deploy.outputs.target }}/backend/laravel/"
 
       - name: Prepare Laravel runtime and refresh caches
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
-          script_stop: true
-          script: |
+        run: |
+          sshpass -f "${{ steps.deploy.outputs.password_file }}" ssh \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -p 22 \
+            "${{ steps.deploy.outputs.username }}@${{ steps.deploy.outputs.host }}" "
             set -e
-            APP_PATH="${{ secrets.FTP_TARGET }}/backend/laravel"
-            mkdir -p "$APP_PATH/storage/framework/views"
-            mkdir -p "$APP_PATH/storage/framework/cache"
-            mkdir -p "$APP_PATH/storage/framework/sessions"
-            mkdir -p "$APP_PATH/storage/logs"
-            mkdir -p "$APP_PATH/bootstrap/cache"
-            if [ ! -f "$APP_PATH/.env" ]; then
-              echo "Missing production .env at $APP_PATH/.env"
+            APP_PATH='${{ steps.deploy.outputs.target }}/backend/laravel'
+            mkdir -p \"\$APP_PATH/storage/framework/views\"
+            mkdir -p \"\$APP_PATH/storage/framework/cache\"
+            mkdir -p \"\$APP_PATH/storage/framework/sessions\"
+            mkdir -p \"\$APP_PATH/storage/logs\"
+            mkdir -p \"\$APP_PATH/bootstrap/cache\"
+            if [ ! -f \"\$APP_PATH/.env\" ]; then
+              echo \"Missing production .env at \$APP_PATH/.env\"
               exit 1
             fi
-            cd "$APP_PATH"
+            cd \"\$APP_PATH\"
             php8.3 artisan optimize:clear
             php8.3 artisan config:cache
             php8.3 artisan route:cache
             php8.3 artisan view:cache
+          "
 
       - name: Smoke test production
         run: |
           curl --fail --silent --show-error "$SITE_URL/backend/api/health"
           curl --fail --silent --show-error --head "$SITE_URL"
+
+      - name: Remove deploy password file
+        if: always()
+        run: rm -f "${{ steps.deploy.outputs.password_file }}"
