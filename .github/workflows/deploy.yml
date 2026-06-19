@@ -37,55 +37,73 @@ jobs:
         working-directory: backend/laravel
         run: composer install --no-dev --prefer-dist --optimize-autoloader
 
+      - name: Install SSH deploy tools
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Prepare remote directories
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_TARGET: ${{ secrets.FTP_TARGET }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+        run: |
+          sshpass -p "$FTP_PASSWORD" ssh -o StrictHostKeyChecking=no -p 22 "$FTP_USERNAME@$FTP_HOST" "
+            mkdir -p '$FTP_TARGET'
+            mkdir -p '$FTP_TARGET/backend'
+            mkdir -p '$FTP_TARGET/backend/laravel'
+          "
+
       - name: Deploy frontend build to IONOS
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.5
-        with:
-          username: ${{ secrets.FTP_USERNAME }}
-          server: ${{ secrets.FTP_HOST }}
-          port: 22
-          password: ${{ secrets.FTP_PASSWORD }}
-          local_path: './dist/*'
-          remote_path: ${{ secrets.FTP_TARGET }}
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_TARGET: ${{ secrets.FTP_TARGET }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+        run: |
+          sshpass -p "$FTP_PASSWORD" rsync -az --delete \
+            --exclude 'backend' \
+            --exclude '.htaccess' \
+            -e "ssh -o StrictHostKeyChecking=no -p 22" \
+            dist/ "$FTP_USERNAME@$FTP_HOST:$FTP_TARGET/"
 
       - name: Deploy root htaccess to IONOS
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.5
-        with:
-          username: ${{ secrets.FTP_USERNAME }}
-          server: ${{ secrets.FTP_HOST }}
-          port: 22
-          password: ${{ secrets.FTP_PASSWORD }}
-          local_path: './.htaccess'
-          remote_path: ${{ secrets.FTP_TARGET }}
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_TARGET: ${{ secrets.FTP_TARGET }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+        run: |
+          sshpass -p "$FTP_PASSWORD" rsync -az \
+            -e "ssh -o StrictHostKeyChecking=no -p 22" \
+            ./.htaccess "$FTP_USERNAME@$FTP_HOST:$FTP_TARGET/.htaccess"
 
-      - name: Deploy backend index to IONOS
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.5
-        with:
-          username: ${{ secrets.FTP_USERNAME }}
-          server: ${{ secrets.FTP_HOST }}
-          port: 22
-          password: ${{ secrets.FTP_PASSWORD }}
-          local_path: './backend/root/index.php'
-          remote_path: ${{ secrets.FTP_TARGET }}/backend
-
-      - name: Deploy backend htaccess to IONOS
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.5
-        with:
-          username: ${{ secrets.FTP_USERNAME }}
-          server: ${{ secrets.FTP_HOST }}
-          port: 22
-          password: ${{ secrets.FTP_PASSWORD }}
-          local_path: './backend/root/.htaccess'
-          remote_path: ${{ secrets.FTP_TARGET }}/backend
+      - name: Deploy backend routing files to IONOS
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_TARGET: ${{ secrets.FTP_TARGET }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+        run: |
+          sshpass -p "$FTP_PASSWORD" rsync -az \
+            -e "ssh -o StrictHostKeyChecking=no -p 22" \
+            ./backend/root/index.php "$FTP_USERNAME@$FTP_HOST:$FTP_TARGET/backend/index.php"
+          sshpass -p "$FTP_PASSWORD" rsync -az \
+            -e "ssh -o StrictHostKeyChecking=no -p 22" \
+            ./backend/root/.htaccess "$FTP_USERNAME@$FTP_HOST:$FTP_TARGET/backend/.htaccess"
 
       - name: Deploy Laravel app to IONOS
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.5
-        with:
-          username: ${{ secrets.FTP_USERNAME }}
-          server: ${{ secrets.FTP_HOST }}
-          port: 22
-          password: ${{ secrets.FTP_PASSWORD }}
-          local_path: './backend/laravel/*'
-          remote_path: ${{ secrets.FTP_TARGET }}/backend/laravel
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_TARGET: ${{ secrets.FTP_TARGET }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+        run: |
+          sshpass -p "$FTP_PASSWORD" rsync -az --delete \
+            --exclude '.env' \
+            --exclude 'storage/' \
+            --exclude 'bootstrap/cache/*.php' \
+            -e "ssh -o StrictHostKeyChecking=no -p 22" \
+            ./backend/laravel/ "$FTP_USERNAME@$FTP_HOST:$FTP_TARGET/backend/laravel/"
 
       - name: Prepare Laravel runtime and refresh caches
         uses: appleboy/ssh-action@v1.2.0
