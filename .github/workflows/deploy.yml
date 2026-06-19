@@ -10,6 +10,9 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
+      IONOS_HOST: access-5020603051.webspace-host.com
+      IONOS_TARGET: /home/www/public
+      IONOS_USERNAME: su266029
       SITE_URL: https://www.backfillconstruction.co.uk
 
     steps:
@@ -43,20 +46,17 @@ jobs:
       - name: Normalize deploy settings
         id: deploy
         env:
-          FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_TARGET: ${{ secrets.FTP_TARGET }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
         run: |
           set -euo pipefail
-          HOST="$(printf '%s' "$FTP_HOST" | tr -d '\r\n')"
-          USERNAME="$(printf '%s' "$FTP_USERNAME" | tr -d '\r\n')"
-          TARGET="$(printf '%s' "$FTP_TARGET" | tr -d '\r\n')"
+          HOST="$(printf '%s' "$IONOS_HOST" | tr -d '\r\n')"
+          USERNAME="$(printf '%s' "$IONOS_USERNAME" | tr -d '\r\n')"
+          TARGET="$(printf '%s' "$IONOS_TARGET" | tr -d '\r\n')"
           PASSWORD="$(printf '%s' "$FTP_PASSWORD" | tr -d '\r\n')"
           PASSWORD_FILE="$RUNNER_TEMP/ionos-password"
 
           if [ -z "$HOST" ] || [ -z "$USERNAME" ] || [ -z "$TARGET" ] || [ -z "$PASSWORD" ]; then
-            echo "Missing one or more required deploy secrets: FTP_HOST, FTP_USERNAME, FTP_PASSWORD, FTP_TARGET."
+            echo "Missing the required deploy password secret: FTP_PASSWORD."
             exit 1
           fi
 
