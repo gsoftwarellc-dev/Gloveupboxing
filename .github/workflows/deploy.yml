@@ -142,8 +142,25 @@ jobs:
 
       - name: Smoke test production
         run: |
-          curl --fail --silent --show-error "$SITE_URL/backend/api/health"
-          curl --fail --silent --show-error --head "$SITE_URL"
+          set -euo pipefail
+          health=''
+
+          for attempt in 1 2 3 4 5 6; do
+            health="$(curl --silent --show-error --fail "$SITE_URL/backend/api/health" || true)"
+
+            if curl --silent --show-error --fail --head "$SITE_URL" >/dev/null \
+              && printf '%s' "$health" | grep -F '"app":"Bravo CRM API"' >/dev/null; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 6 ]; then
+              sleep 5
+            fi
+          done
+
+          echo "Production smoke test did not confirm the Bravo deployment."
+          echo "Last health response: ${health:-<empty>}"
+          exit 1
 
       - name: Remove deploy password file
         if: always()
