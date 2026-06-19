@@ -214,7 +214,7 @@ export default function Candidates() {
       {poolTab === 'placed' && (
         <div style={{ padding: '0.75rem 1rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', fontSize: '0.82rem', color: '#15803d', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Briefcase size={14} />
-          These candidates have been assigned and are currently working via Backfill.
+          These candidates have been assigned and are currently working via Bravo.
         </div>
       )}
 

@@ -124,7 +124,7 @@ export default function Layout() {
           </button>
           
           <Link to="/admin" style={{ display: 'flex', alignItems: 'center' }}>
-            <img src={logo} alt="Backfill CRM" style={{ height: '36px', width: 'auto', objectFit: 'contain' }} />
+            <img src={logo} alt="Bravo CRM" style={{ height: '36px', width: 'auto', objectFit: 'contain' }} />
           </Link>
         </div>
 
@@ -261,7 +261,7 @@ export default function Layout() {
           <div className="mobile-drawer" onClick={e => e.stopPropagation()}>
             {/* Drawer Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <img src={logo} alt="Backfill CRM" style={{ height: '32px', width: 'auto' }} />
+              <img src={logo} alt="Bravo CRM" style={{ height: '32px', width: 'auto' }} />
               <button 
                 onClick={() => setMobileOpen(false)} 
                 style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer', fontSize: '1.2rem' }}

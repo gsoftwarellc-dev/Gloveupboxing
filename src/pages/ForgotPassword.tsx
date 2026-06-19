@@ -97,7 +97,7 @@ export default function ForgotPassword() {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img 
             src={logo} 
-            alt="Backfill Logo" 
+            alt="Bravo Logo" 
             style={{ 
               height: '42px', 
               width: 'auto', 

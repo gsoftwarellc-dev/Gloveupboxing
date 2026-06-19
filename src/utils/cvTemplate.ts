@@ -1,4 +1,4 @@
-// Backfill house-style CV template.
+// Bravo house-style CV template.
 // Produces a standalone, print-ready HTML document from a FormattedCv.
 // Dark/gold brand to match the CRM. Used by the CVs page for Print & Download.
 
@@ -28,7 +28,7 @@ export function buildFormattedCvHtml(cv: FormattedCv): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${esc(cv.name)} — Backfill CV</title>
+<title>${esc(cv.name)} — Bravo CV</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: Inter, -apple-system, Segoe UI, Roboto, sans-serif; color: #1a1a2e; margin: 0; background: #f5f6fa; }
@@ -61,7 +61,7 @@ export function buildFormattedCvHtml(cv: FormattedCv): string {
     ${experience ? `<div class="section"><h2>Experience</h2><ul>${experience}</ul></div>` : ''}
     ${skills ? `<div class="section"><h2>Key Skills</h2><div class="chips">${skills}</div></div>` : ''}
     ${certs ? `<div class="section"><h2>Certifications</h2><p>${certs}</p></div>` : ''}
-    <div class="footer">Formatted by Backfill Construction Recruitment</div>
+    <div class="footer">Formatted by Bravo Construction Recruitment</div>
   </div>
 </body>
 </html>`

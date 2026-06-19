@@ -1,4 +1,4 @@
-# Backfill CRM Backend
+# Bravo CRM Backend
 
 Laravel API backend for the existing React CRM in `../crm-frontend`, using MySQL as the persistence layer.
 
@@ -17,7 +17,7 @@ php artisan serve --host=127.0.0.1 --port=8000
 The default local admin seeded by `AdminUserSeeder` is:
 
 ```text
-Email: admin@backfill.local
+Email: admin@bravo.local
 Password: password
 ```
 

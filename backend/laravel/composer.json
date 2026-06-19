@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "backfill/crm-backend",
+    "name": "bravo/crm-backend",
     "type": "project",
-    "description": "Laravel API backend for the Backfill CRM.",
+    "description": "Laravel API backend for the Bravo CRM.",
     "keywords": ["laravel", "crm", "mysql"],
     "license": "MIT",
     "require": {

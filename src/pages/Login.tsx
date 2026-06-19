@@ -92,7 +92,7 @@ export default function Login() {
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <img 
             src={logo} 
-            alt="Backfill Logo" 
+            alt="Bravo Logo" 
             style={{ 
               height: '42px', 
               width: 'auto', 

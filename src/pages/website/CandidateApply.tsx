@@ -359,7 +359,7 @@ export default function CandidateApply() {
                   </div>
                 ))}
                 <div style={{ padding: '0.875rem', background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: '8px', fontSize: '0.9rem', color: '#92400e' }}>
-                  By submitting, you agree to our Privacy Policy and consent to Backfill Construction Recruitment storing and using your data to match you to suitable roles.
+                  By submitting, you agree to our Privacy Policy and consent to Bravo Construction Recruitment storing and using your data to match you to suitable roles.
                 </div>
               </div>
             </div>

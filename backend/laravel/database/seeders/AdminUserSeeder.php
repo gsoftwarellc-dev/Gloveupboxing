@@ -11,25 +11,25 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate(
-            ['email' => env('CRM_ADMIN_EMAIL', 'admin@backfill.local')],
+            ['email' => env('CRM_ADMIN_EMAIL', 'admin@bravo.local')],
             [
-                'name' => env('CRM_ADMIN_NAME', 'Backfill Admin'),
+                'name' => env('CRM_ADMIN_NAME', 'Bravo Admin'),
                 'password' => Hash::make(env('CRM_ADMIN_PASSWORD', 'password')),
                 'role' => 'admin',
             ]
         );
 
         User::updateOrCreate(
-            ['email' => 'backfillconstruction@gmail.com'],
+            ['email' => 'bravoconstruction@gmail.com'],
             [
-                'name' => 'Backfill Construction',
+                'name' => 'Bravo Construction',
                 'password' => Hash::make('password'),
                 'role' => 'admin',
             ]
         );
 
         User::updateOrCreate(
-            ['email' => 'Taylor@Backfillconstruction.co.uk'],
+            ['email' => 'Taylor@Bravoconstruction.co.uk'],
             [
                 'name' => 'Taylor',
                 'password' => Hash::make('password'),

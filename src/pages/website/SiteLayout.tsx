@@ -55,8 +55,8 @@ export default function SiteLayout() {
         style={{ background: '#161c2d', boxShadow: scrolled ? '0 4px 24px rgba(0,0,0,0.35)' : 'none' }}
       >
         <div className="site-header__inner">
-          <Link to="/" style={{ display: 'flex', alignItems: 'center' }} aria-label="Backfill — Home">
-            <img src={logo} alt="Backfill Construction Recruitment" style={{ height: 46, width: 'auto', objectFit: 'contain' }} />
+          <Link to="/" style={{ display: 'flex', alignItems: 'center' }} aria-label="Bravo — Home">
+            <img src={logo} alt="Bravo Construction Recruitment" style={{ height: 46, width: 'auto', objectFit: 'contain' }} />
           </Link>
           <nav className="site-nav">
             {navLinks.map(l =>
@@ -91,7 +91,7 @@ export default function SiteLayout() {
         <div className="site-drawer-overlay" onClick={() => setMenuOpen(false)}>
           <div className="site-drawer" onClick={e => e.stopPropagation()}>
             <div className="site-drawer__top">
-              <img src={logo} alt="Backfill" style={{ height: 38, width: 'auto', objectFit: 'contain' }} />
+              <img src={logo} alt="Bravo" style={{ height: 38, width: 'auto', objectFit: 'contain' }} />
               <button className="site-drawer__close" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
                 <X size={24} color="#fff" />
               </button>
@@ -124,7 +124,7 @@ export default function SiteLayout() {
       <footer id="contact-footer" className="site-footer">
         <div className="site-footer__grid">
           <div>
-            <img src={logo} alt="Backfill" style={{ height: 42, width: 'auto', objectFit: 'contain', marginBottom: '1.25rem' }} />
+            <img src={logo} alt="Bravo" style={{ height: 42, width: 'auto', objectFit: 'contain', marginBottom: '1.25rem' }} />
             <p style={{ fontSize: '0.92rem', lineHeight: 1.7, color: '#8b93a4', maxWidth: '34ch' }}>
               Specialist construction recruitment — connecting the best talent with the UK's leading
               contractors and developers.
@@ -136,7 +136,7 @@ export default function SiteLayout() {
           <div>
             <h4>Head Office</h4>
             <div className="site-footer__row"><Phone size={15} style={{ marginTop: 2 }} /> 01234 332960</div>
-            <div className="site-footer__row"><Mail size={15} style={{ marginTop: 2 }} /> info@backfillrecruitment.co.uk</div>
+            <div className="site-footer__row"><Mail size={15} style={{ marginTop: 2 }} /> info@bravorecruitment.co.uk</div>
             <div className="site-footer__row"><MapPin size={15} style={{ marginTop: 2 }} /> <span>71-75 Shelton Street,<br />Covent Garden, London,<br />WC2H 9JQ, United Kingdom</span></div>
           </div>
           <div>
@@ -150,7 +150,7 @@ export default function SiteLayout() {
           </div>
         </div>
         <div className="site-footer__bar">
-          <span>© Copyright Backfill Construction Recruitment {new Date().getFullYear()}</span>
+          <span>© Copyright Bravo Construction Recruitment {new Date().getFullYear()}</span>
           <span>Built with care.</span>
         </div>
       </footer>

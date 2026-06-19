@@ -112,7 +112,7 @@ return [
 
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'no-reply@example.com'),
-        'name' => env('MAIL_FROM_NAME', 'Backfill CRM'),
+        'name' => env('MAIL_FROM_NAME', 'Bravo CRM'),
     ],
 
 ];

@@ -121,7 +121,7 @@ class EmailCampaignController extends Controller
             if (!empty($recipients)) {
                 $result = Brevo::sendBulk(
                     $recipients,
-                    $campaign->subject ?? 'Message from Backfill Construction',
+                    $campaign->subject ?? 'Message from Bravo Construction',
                     $campaign->body
                 );
 

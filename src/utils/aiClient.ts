@@ -113,7 +113,7 @@ export async function rankProfiles(cvs: CvRecord[], brief: string): Promise<Rank
 }
 
 /**
- * Reformats raw CV text into the Backfill house structure as plain sections.
+ * Reformats raw CV text into the Bravo house structure as plain sections.
  * The stub does light parsing; a real AI backend would do far better extraction.
  * Returns structured sections the UI renders into the branded template.
  */

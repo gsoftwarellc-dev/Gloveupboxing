@@ -18,7 +18,7 @@ export default function WeeklyIntelligenceReports() {
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', color: '#5a6172', lineHeight: 1.75, fontSize: '1rem' }}>
             <p style={{ margin: 0 }}>
-              Every week, Backfill tracks live projects, contractor activity, hiring trends and upcoming developments across the UK construction industry.
+              Every week, Bravo tracks live projects, contractor activity, hiring trends and upcoming developments across the UK construction industry.
             </p>
             <p style={{ margin: 0 }}>
               Our intelligence reports highlight projects due to start, contractors expanding their teams, emerging recruitment hotspots, market trends and upcoming hiring opportunities, helping our clients stay ahead of the competition and secure talent before hiring becomes urgent.

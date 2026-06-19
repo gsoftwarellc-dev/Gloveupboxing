@@ -30,9 +30,9 @@ return [
 
     'brevo' => [
         'api_key' => env('BREVO_API_KEY'),
-        'sender_name' => env('BREVO_SENDER_NAME', env('MAIL_FROM_NAME', 'Backfill CRM')),
+        'sender_name' => env('BREVO_SENDER_NAME', env('MAIL_FROM_NAME', 'Bravo CRM')),
         'sender_email' => env('BREVO_SENDER_EMAIL', env('MAIL_FROM_ADDRESS', 'no-reply@example.com')),
-        'sms_sender' => env('BREVO_SMS_SENDER', 'Backfill'),
+        'sms_sender' => env('BREVO_SMS_SENDER', 'Bravo'),
     ],
 
     'slack' => [

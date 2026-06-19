@@ -126,7 +126,7 @@ export default function Cvs() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${formatted.name.replace(/\s+/g, '-')}-Backfill-CV.html`
+    a.download = `${formatted.name.replace(/\s+/g, '-')}-Bravo-CV.html`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -164,7 +164,7 @@ export default function Cvs() {
         <div>
           <h1 className="page-title">Candidate CVs</h1>
           <p style={{ color: '#000', fontSize: '1.05rem', margin: '0.25rem 0 0' }}>
-            Read CVs submitted through the application form, copy them, rank profiles against a brief with AI, and reformat to the Backfill standard.
+            Read CVs submitted through the application form, copy them, rank profiles against a brief with AI, and reformat to the Bravo standard.
           </p>
         </div>
       </div>
@@ -264,7 +264,7 @@ export default function Cvs() {
               <h3 style={{ color: '#374151', margin: 0 }}>No CV selected</h3>
               <p style={{ margin: 0, maxWidth: 420 }}>
                 When candidates submit the application form with their CV, they appear in the list on the left.
-                Select one to read it, copy it, analyse it, or reformat it to the Backfill standard.
+                Select one to read it, copy it, analyse it, or reformat it to the Bravo standard.
               </p>
             </div>
           )}
@@ -326,7 +326,7 @@ export default function Cvs() {
                 <div style={{ border: '1px solid #e8eaf0', borderRadius: '0.75rem', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', padding: '0.6rem 0.875rem', background: '#1a1a2e' }}>
                     <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Wand2 size={14} style={{ color: '#d4af5a' }} />Backfill-Formatted CV
+                      <Wand2 size={14} style={{ color: '#d4af5a' }} />Bravo-Formatted CV
                     </span>
                     <div style={{ display: 'flex', gap: '0.4rem' }}>
                       <CopyButton text={formattedPlainText} label="Copy" className="btn-secondary" />

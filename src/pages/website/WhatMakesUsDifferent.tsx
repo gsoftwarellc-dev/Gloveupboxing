@@ -22,7 +22,7 @@ export default function WhatMakesUsDifferent() {
               Successful construction recruitment is about more than finding qualified candidates. It’s about identifying the right people, in the right location, at the right time.
             </p>
             <p style={{ margin: 0 }}>
-              Backfill combines advanced geo mapping technology with detailed project intelligence to provide a more accurate and strategic approach to recruitment.
+              Bravo combines advanced geo mapping technology with detailed project intelligence to provide a more accurate and strategic approach to recruitment.
             </p>
             <p style={{ margin: 0 }}>
               Our systems analyse candidate locations, travel distances, project locations, upcoming developments and regional availability, enabling us to identify the most suitable professionals for every opportunity.
@@ -42,7 +42,7 @@ export default function WhatMakesUsDifferent() {
               </ul>
             </div>
             <p style={{ margin: 0 }}>
-              Combined with our project intelligence platform, Backfill provides clients with a level of recruitment insight that goes beyond traditional candidate sourcing.
+              Combined with our project intelligence platform, Bravo provides clients with a level of recruitment insight that goes beyond traditional candidate sourcing.
             </p>
             <p style={{ margin: 0, fontWeight: 700, color: '#0f172a' }}>
               The result is a more efficient hiring process, stronger workforce planning and access to the talent needed to successfully deliver projects.

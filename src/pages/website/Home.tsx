@@ -50,7 +50,7 @@ export default function Home() {
             <span className="hero__word"><span className="hero__word-in hero__title-accent" style={{ '--d': '0.64s' } as React.CSSProperties}>decisions</span></span>
           </h1>
           <p className="hero__sub reveal reveal-d2">
-            Backfill combines project intelligence, advanced geo mapping and specialist recruitment
+            Bravo combines project intelligence, advanced geo mapping and specialist recruitment
             expertise to help contractors, developers and consultancies identify opportunities, plan
             ahead and secure the talent they need to deliver successful projects.
           </p>
@@ -86,7 +86,7 @@ export default function Home() {
               Built From Real Construction Experience
             </h2>
             <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#161c2d', marginTop: '1.5rem', lineHeight: 1.6 }}>
-              Backfill Construction Recruitment was founded on first-hand experience within the
+              Bravo Construction Recruitment was founded on first-hand experience within the
               construction industry.
             </p>
           </div>

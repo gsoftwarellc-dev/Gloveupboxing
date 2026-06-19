@@ -81,7 +81,7 @@ class Brevo
     }
 
     // Alphanumeric sender ID shown to the recipient (max 11 chars, no spaces) — must be approved in Brevo for the target country.
-    private const SMS_SENDER = 'Backfill';
+    private const SMS_SENDER = 'Bravo';
 
     /**
      * Send a single transactional SMS via Brevo.
@@ -173,7 +173,7 @@ class Brevo
     private static function sender(): array
     {
         return [
-            'name' => (string) config('services.brevo.sender_name', 'Backfill CRM'),
+            'name' => (string) config('services.brevo.sender_name', 'Bravo CRM'),
             'email' => (string) config('services.brevo.sender_email', 'no-reply@example.com'),
         ];
     }

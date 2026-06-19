@@ -84,7 +84,7 @@ export default function ResetPassword() {
         position: 'relative',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <img src={logo} alt="Backfill Logo" style={{ height:'42px', width:'auto', display:'block', margin:'0 auto 1rem', objectFit:'contain' }} />
+          <img src={logo} alt="Bravo Logo" style={{ height:'42px', width:'auto', display:'block', margin:'0 auto 1rem', objectFit:'contain' }} />
           <h1 style={{ fontSize:'1.5rem', fontWeight:800, color:'#ffffff', margin:'0 0 0.5rem', letterSpacing:'-0.02em' }}>
             {success ? 'Password Updated' : 'Choose New Password'}
           </h1>

@@ -50,7 +50,7 @@ Route::post('/auth/forgot-password', function (Request $request) {
     $html = "
         <div style='font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:40px 32px;background:#f4f4f4;'>
             <div style='background:#161c2d;border-radius:12px;padding:32px;text-align:center;margin-bottom:24px;'>
-                <h1 style='color:#d4af5a;font-size:22px;margin:0 0 4px;'>Backfill CRM</h1>
+                <h1 style='color:#d4af5a;font-size:22px;margin:0 0 4px;'>Bravo CRM</h1>
                 <p style='color:rgba(255,255,255,0.5);font-size:13px;margin:0;'>Construction Recruitment</p>
             </div>
             <div style='background:#ffffff;border-radius:12px;padding:32px;'>
@@ -69,7 +69,7 @@ Route::post('/auth/forgot-password', function (Request $request) {
 
     $sent = \App\Support\Brevo::send(
         ['email' => $user->email, 'name' => $user->name],
-        'Reset your Backfill CRM password',
+        'Reset your Bravo CRM password',
         $html
     );
 
@@ -263,4 +263,3 @@ Route::post('settings/smtp', function (Request $request) {
 
     return response()->json(['data' => $settings]);
 });
-

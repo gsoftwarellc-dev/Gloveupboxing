@@ -6,7 +6,7 @@ const offices = [
     name: 'Head Office',
     address: ['71-75 Shelton Street', 'Covent Garden, London', 'WC2H 9JQ, United Kingdom'],
     phone: '01234 332960',
-    email: 'info@backfillrecruitment.co.uk',
+    email: 'info@bravorecruitment.co.uk',
   },
 ]
 
@@ -27,7 +27,7 @@ export default function Contact() {
       <section className="page-hero">
         <div className="page-hero__inner">
           <span className="site-kicker" style={{ color: '#d4af5a' }}>Get In Touch</span>
-          <h1 className="page-hero__title">Contact Backfill</h1>
+          <h1 className="page-hero__title">Contact Bravo</h1>
           <p className="page-hero__sub">
             Whether you're hiring or looking for your next role, our specialist consultants are ready to help.
           </p>
