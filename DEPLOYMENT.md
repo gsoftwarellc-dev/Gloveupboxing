@@ -2,9 +2,9 @@
 
 This repo is set up for one-way deployment from GitHub to IONOS:
 
-- Frontend build output is deployed to the IONOS web root.
-- Laravel backend code is deployed to `/backend/laravel`.
-- The Laravel routing files in `backend/root` are deployed to `/backend`.
+- Frontend build output is deployed to the live IONOS site root at `/home/www/clickandbuilds/BackfillConstructionRecruitment`.
+- Laravel backend code is deployed to `/home/www/clickandbuilds/BackfillConstructionRecruitment/backend/laravel`.
+- The Laravel routing files in `backend/root` are deployed to `/home/www/clickandbuilds/BackfillConstructionRecruitment/backend`.
 - The production database stays on IONOS and is not synced from GitHub.
 
 ## GitHub Actions secrets
@@ -13,7 +13,7 @@ Create this repository secret in GitHub:
 
 - `FTP_PASSWORD`
 
-The workflow hardcodes the IONOS SSH host, username, frontend web root, and the live backend path.
+The workflow hardcodes the IONOS SSH host, username, live frontend root, and live backend path.
 
 ## IONOS database
 
@@ -32,6 +32,6 @@ On every push to `main`, GitHub Actions will:
 1. Install frontend dependencies.
 2. Build the frontend.
 3. Install Laravel dependencies.
-4. Upload the frontend and root `.htaccess` to `/home/www/public`.
+4. Upload the frontend and root `.htaccess` to `/home/www/clickandbuilds/BackfillConstructionRecruitment`.
 5. Upload the Laravel backend to `/home/www/clickandbuilds/BackfillConstructionRecruitment/backend`.
 6. Clear stale Laravel cache files on IONOS and rebuild config, route, and view caches.

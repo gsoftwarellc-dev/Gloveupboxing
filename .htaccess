@@ -1,16 +1,23 @@
-# Place this as htdocs/.htaccess (root)
+Options -MultiViews -Indexes
+DirectoryIndex index.html index.php
+
+AddHandler application/x-httpd-php84 .php
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Don't touch /backend/ — let it go through to Laravel
-    RewriteCond %{REQUEST_URI} ^/backend/ [NC]
-    RewriteRule ^ - [L]
+    # Handle Authorization header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # For everything else: if file/folder exists, serve it directly
+    # Serve real static files directly
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Otherwise send to React SPA
+    # Route all backend requests through the Laravel front controller
+    RewriteRule ^backend/ backend/index.php [L,QSA]
+
+    # Everything else goes to the React SPA
     RewriteRule ^ index.html [L]
 </IfModule>

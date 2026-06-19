@@ -12,7 +12,7 @@ jobs:
     env:
       IONOS_BACKEND_TARGET: /home/www/clickandbuilds/BackfillConstructionRecruitment/backend
       IONOS_HOST: access-5020603051.webspace-host.com
-      IONOS_TARGET: /home/www/public
+      IONOS_TARGET: /home/www/clickandbuilds/BackfillConstructionRecruitment
       IONOS_USERNAME: su266029
       SITE_URL: https://www.backfillconstruction.co.uk
 
