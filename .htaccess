@@ -1,0 +1,16 @@
+# Place this as htdocs/.htaccess (root)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Don't touch /backend/ — let it go through to Laravel
+    RewriteCond %{REQUEST_URI} ^/backend/ [NC]
+    RewriteRule ^ - [L]
+
+    # For everything else: if file/folder exists, serve it directly
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Otherwise send to React SPA
+    RewriteRule ^ index.html [L]
+</IfModule>

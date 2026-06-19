@@ -1,0 +1,20 @@
+# Place this as htdocs/backend/.htaccess
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /backend/
+
+    # Handle Authorization Header (shared hosting often strips it)
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Send all requests to index.php
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Protect Laravel app files
+<FilesMatch "\.(env|log|json|lock|md)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
