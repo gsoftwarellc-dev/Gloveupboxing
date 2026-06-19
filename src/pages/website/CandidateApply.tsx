@@ -1,26 +1,109 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Upload, CheckCircle, ChevronRight, ChevronLeft, User, Briefcase, Award, FileText } from 'lucide-react'
+import { Upload, CheckCircle, ChevronRight, ChevronLeft, User, Briefcase, Award, FileText, X } from 'lucide-react'
+import { useCrmData } from '../../context/useCrmData'
 
 const steps = ['Personal Details', 'Work Experience', 'Certificates', 'CV Upload', 'Review']
 
 const disciplines = ['Civil', 'Structural', 'Groundworks', 'MEP', 'Commercial', 'H&S', 'Other']
 const certOptions = ['SMSTS', 'CSCS Gold Card', 'CSCS Black Card', 'CSCS Blue Card', 'NEBOSH Diploma', 'IOSH Managing Safely', 'First Aid at Work', 'MRICS', 'IStructE Chartership', 'PMP', 'PRINCE2 Practitioner', 'CPCS Appointed Person', 'NPORS', 'ECS Gold Card', 'CIBSE Membership']
 
+// Per-step required fields → shown as validation error before advancing
+const stepValidation: Record<number, { field: keyof typeof defaultForm; label: string }[]> = {
+  0: [
+    { field: 'firstName', label: 'First name' },
+    { field: 'lastName',  label: 'Last name'  },
+    { field: 'email',     label: 'Email address' },
+    { field: 'phone',     label: 'Phone number'  },
+    { field: 'location',  label: 'Town / City'   },
+    { field: 'postcode',  label: 'Postcode'      },
+  ],
+  1: [
+    { field: 'jobTitle', label: 'Job title' },
+  ],
+}
+
+const defaultForm = {
+  firstName: '', lastName: '', email: '', phone: '',
+  location: '', postcode: '',
+  jobTitle: '', discipline: 'Civil', experience: '', salary: '', noticePeriod: '', travelRadius: '',
+  rightToWork: 'Yes',
+  cvText: '',
+}
+
 export default function CandidateApply() {
+  const { submitApplication } = useCrmData()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState(0)
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [validationError, setValidationError] = useState('')
   const [certs, setCerts] = useState<string[]>([])
-  const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', phone: '',
-    location: '', postcode: '',
-    jobTitle: '', discipline: 'Civil', experience: '', salary: '', noticePeriod: '', travelRadius: '',
-    rightToWork: 'Yes',
-    cvText: '',
-  })
+  const [cvFile, setCvFile] = useState<File | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const [form, setForm] = useState(defaultForm)
 
   const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }))
   const toggleCert = (cert: string) => setCerts(prev => prev.includes(cert) ? prev.filter(c => c !== cert) : [...prev, cert])
+
+  function handleFile(file: File | null) {
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) { setValidationError('File must be under 10 MB.'); return }
+    setCvFile(file)
+    setValidationError('')
+  }
+
+  function goNext() {
+    const rules = stepValidation[step]
+    if (rules) {
+      const missing = rules.filter(r => !form[r.field as keyof typeof form]?.toString().trim())
+      if (missing.length) {
+        setValidationError(`Please fill in: ${missing.map(r => r.label).join(', ')}`)
+        return
+      }
+      // Basic email check on step 0
+      if (step === 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        setValidationError('Please enter a valid email address.')
+        return
+      }
+    }
+    setValidationError('')
+    setStep(s => s + 1)
+  }
+
+  async function submit() {
+    if (!form.cvText.trim() && !cvFile) {
+      setValidationError('Please paste your CV text or upload a CV file before submitting.')
+      return
+    }
+    setSubmitting(true)
+    setSubmitError('')
+    setValidationError('')
+    try {
+      // If a file was attached, send as multipart/form-data
+      if (cvFile) {
+        const fd = new FormData()
+        Object.entries({ ...form, experience: form.experience || '', certificates: JSON.stringify(certs), skills: '[]' })
+          .forEach(([k, v]) => fd.append(k, v as string))
+        fd.append('cvFile', cvFile)
+        // submitApplication accepts Record<string, unknown> so we use the raw fetch path
+        await submitApplication(fd as unknown as Record<string, unknown>)
+      } else {
+        await submitApplication({
+          ...form,
+          experience: form.experience ? Number(form.experience) : null,
+          certificates: certs,
+          skills: [],
+        })
+      }
+      setSubmitted(true)
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Unable to submit application.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   if (submitted) {
     return (
@@ -33,7 +116,7 @@ export default function CandidateApply() {
           <p style={{ margin: '0 0 1.5rem', color: '#6b7280', fontSize: '1rem', lineHeight: 1.6 }}>
             Thank you, {form.firstName || 'there'}! One of our consultants will review your details and be in touch within 2 working days.
           </p>
-          <Link to="/home/jobs" style={{ display: 'inline-block', background: '#b8942e', color: '#fff', borderRadius: '8px', padding: '0.75rem 1.5rem', textDecoration: 'none', fontWeight: 700, fontSize: '1rem' }}>Browse More Jobs</Link>
+          <Link to="/jobs" style={{ display: 'inline-block', background: '#b8942e', color: '#fff', borderRadius: '8px', padding: '0.75rem 1.5rem', textDecoration: 'none', fontWeight: 700, fontSize: '1rem' }}>Browse More Jobs</Link>
         </div>
       </div>
     )
@@ -193,17 +276,47 @@ export default function CandidateApply() {
           {step === 3 && (
             <div>
               <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 700, color: '#000' }}>Upload Your CV</h2>
-              <p style={{ margin: '0 0 1.5rem', color: '#6b7280', fontSize: '0.9rem' }}>Upload your CV in PDF, Word, or similar format. Max file size 10MB.</p>
-              <div style={{ border: '2px dashed #e5e7eb', borderRadius: '12px', padding: '3rem', textAlign: 'center', background: '#f8f9fb', cursor: 'pointer', transition: 'border-color 0.15s' }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = '#b8942e')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
-                <Upload size={32} style={{ color: '#9ca3af', margin: '0 auto 0.875rem', display: 'block' }} />
-                <div style={{ fontWeight: 600, color: '#000', marginBottom: '0.5rem', fontSize: '1rem' }}>Click to upload or drag & drop</div>
-                <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>PDF, DOCX, RTF up to 10MB</div>
-                <button style={{ marginTop: '1.25rem', padding: '0.625rem 1.5rem', background: '#b8942e', color: '#fff', border: 'none', borderRadius: '7px', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem' }}>
-                  Choose File
-                </button>
-              </div>
+              <p style={{ margin: '0 0 1.5rem', color: '#6b7280', fontSize: '0.9rem' }}>Upload your CV in PDF, Word, or similar format — or paste the text below. Max file size 10MB.</p>
+
+              {/* Hidden real file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.rtf,.txt"
+                style={{ display: 'none' }}
+                onChange={e => handleFile(e.target.files?.[0] ?? null)}
+              />
+
+              {/* Drop zone */}
+              {cvFile ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 1.25rem', background: 'rgba(184,148,46,0.06)', border: '2px solid #b8942e', borderRadius: '12px' }}>
+                  <FileText size={22} style={{ color: '#b8942e', flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, color: '#000', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cvFile.name}</div>
+                    <div style={{ fontSize: '0.82rem', color: '#6b7280' }}>{(cvFile.size / 1024).toFixed(0)} KB</div>
+                  </div>
+                  <button
+                    onClick={() => { setCvFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '0.25rem' }}
+                  ><X size={16} /></button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0] ?? null) }}
+                  style={{ border: `2px dashed ${dragOver ? '#b8942e' : '#e5e7eb'}`, borderRadius: '12px', padding: '3rem', textAlign: 'center', background: dragOver ? 'rgba(184,148,46,0.04)' : '#f8f9fb', cursor: 'pointer', transition: 'all 0.15s' }}
+                >
+                  <Upload size={32} style={{ color: '#9ca3af', margin: '0 auto 0.875rem', display: 'block' }} />
+                  <div style={{ fontWeight: 600, color: '#000', marginBottom: '0.5rem', fontSize: '1rem' }}>Click to upload or drag & drop</div>
+                  <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>PDF, DOCX, RTF up to 10MB</div>
+                  <div style={{ marginTop: '1.25rem', display: 'inline-block', padding: '0.625rem 1.5rem', background: '#b8942e', color: '#fff', borderRadius: '7px', fontWeight: 700, fontSize: '0.95rem' }}>
+                    Choose File
+                  </div>
+                </div>
+              )}
+
               <div style={{ marginTop: '1rem', padding: '0.875rem', background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: '8px', fontSize: '0.9rem', color: '#059669' }}>
                 ✓ Your CV will be stored securely and only shared with your consent.
               </div>
@@ -255,7 +368,7 @@ export default function CandidateApply() {
           {/* Navigation */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
             <button
-              onClick={() => setStep(s => Math.max(0, s - 1))}
+              onClick={() => { setValidationError(''); setStep(s => Math.max(0, s - 1)) }}
               disabled={step === 0}
               style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.625rem 1.25rem', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#fff', cursor: step === 0 ? 'default' : 'pointer', color: step === 0 ? '#d1d5db' : '#000', fontWeight: 600, fontSize: '0.95rem' }}
             >
@@ -263,20 +376,26 @@ export default function CandidateApply() {
             </button>
             {step < steps.length - 1 ? (
               <button
-                onClick={() => setStep(s => s + 1)}
+                onClick={goNext}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.625rem 1.5rem', background: '#b8942e', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem' }}
               >
                 Next <ChevronRight size={16} />
               </button>
             ) : (
               <button
-                onClick={() => setSubmitted(true)}
+                onClick={submit}
+                disabled={submitting}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.625rem 1.75rem', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem' }}
               >
-                <CheckCircle size={16} />Submit Application
+                <CheckCircle size={16} />{submitting ? 'Submitting...' : 'Submit Application'}
               </button>
             )}
           </div>
+          {(validationError || submitError) && (
+            <div style={{ marginTop: '0.875rem', padding: '0.75rem 0.875rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#b91c1c', fontSize: '0.9rem' }}>
+              {validationError || submitError}
+            </div>
+          )}
         </div>
       </div>
     </div>

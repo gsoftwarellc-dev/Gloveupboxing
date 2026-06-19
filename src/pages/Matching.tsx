@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Zap, Search, Star, MapPin, CheckCircle, XCircle,
-  Award, Clock, Banknote, Briefcase, ChevronDown, ChevronUp,
+  Award, Clock, TrendingUp, Briefcase, ChevronDown, ChevronUp,
   Users, Building2, Calendar, ArrowLeft, Filter, ChevronLeft, ChevronRight
 } from 'lucide-react'
-import { candidates, projects } from '../data/mock'
+import { DataState } from '../components/DataState'
+import { useCrmData } from '../context/useCrmData'
+import type { Candidate, Project } from '../types/crm'
 
 const PAGE_SIZE = 20
 
@@ -13,36 +15,37 @@ function Pagination({ page, setPage, total }: { page: number; setPage: (fn: (p: 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   if (totalPages <= 1) return null
+
+  // Show at most 7 page buttons with ellipsis
+  const getPages = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const pages: (number | '…')[] = [1]
+    if (currentPage > 3) pages.push('…')
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i)
+    if (currentPage < totalPages - 2) pages.push('…')
+    pages.push(totalPages)
+    return pages
+  }
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
       <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>
         Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, total)} of {total}
       </span>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-        <button
-          className="btn-secondary"
-          style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
-          disabled={currentPage === 1}
-          onClick={() => setPage(p => Math.max(1, p - 1))}
-        >
+        <button className="btn-secondary" style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
+          disabled={currentPage === 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
           <ChevronLeft size={12} />
         </button>
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-          <button
-            key={n}
-            className={n === currentPage ? 'btn-primary' : 'btn-secondary'}
-            style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem', minWidth: '2.25rem' }}
-            onClick={() => setPage(() => n)}
-          >
-            {n}
-          </button>
-        ))}
-        <button
-          className="btn-secondary"
-          style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
-          disabled={currentPage === totalPages}
-          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-        >
+        {getPages().map((n, i) =>
+          n === '…'
+            ? <span key={`e${i}`} style={{ fontSize: '0.82rem', color: '#9ca3af', padding: '0 0.2rem' }}>…</span>
+            : <button key={n} className={n === currentPage ? 'btn-primary' : 'btn-secondary'}
+                style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem', minWidth: '2.25rem' }}
+                onClick={() => setPage(() => n as number)}>{n}</button>
+        )}
+        <button className="btn-secondary" style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
+          disabled={currentPage === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
           <ChevronRight size={12} />
         </button>
       </div>
@@ -50,67 +53,78 @@ function Pagination({ page, setPage, total }: { page: number; setPage: (fn: (p: 
   )
 }
 
-// ── Project positions needed ──────────────────────────────────────────────────
-
-const projectPositions: Record<number, { role: string; discipline: string; qty: number }[]> = {
-  1: [
-    { role: 'Senior Site Manager',  discipline: 'Civil',      qty: 2 },
-    { role: 'Site Engineer',        discipline: 'Civil',      qty: 2 },
-    { role: 'Groundworks Foreman',  discipline: 'Groundworks', qty: 2 },
-  ],
-  2: [
-    { role: 'Structural Engineer',  discipline: 'Structural', qty: 3 },
-    { role: 'MEP Coordinator',      discipline: 'MEP',        qty: 2 },
-    { role: 'Senior QS',            discipline: 'Commercial', qty: 2 },
-    { role: 'Project Manager',      discipline: 'Civil',      qty: 2 },
-    { role: 'Site Manager',         discipline: 'Civil',      qty: 3 },
-  ],
-  3: [
-    { role: 'Civils Site Manager',  discipline: 'Civil',      qty: 4 },
-    { role: 'Groundworks Foreman',  discipline: 'Groundworks', qty: 4 },
-    { role: 'Site Engineer',        discipline: 'Civil',      qty: 4 },
-    { role: 'QS',                   discipline: 'Commercial', qty: 3 },
-  ],
-  4: [
-    { role: 'Site Manager',         discipline: 'Civil',      qty: 2 },
-    { role: 'Quantity Surveyor',    discipline: 'Commercial', qty: 1 },
-    { role: 'Structural Engineer',  discipline: 'Structural', qty: 2 },
-  ],
-}
-
 // ── Match engine ──────────────────────────────────────────────────────────────
 
-function computeMatch(c: typeof candidates[0], projectId: number) {
-  const positions = projectPositions[projectId] ?? []
-  const disciplines = [...new Set(positions.map(p => p.discipline))]
-  const reasons: { text: string; pass: boolean; icon: any }[] = []
+function positionsForProject(project: Project): { role: string; discipline: string; qty: number }[] {
+  // Use tags if set, otherwise fall back to rolesNeeded count of generic roles,
+  // and always ensure at least 1 position so matching always runs
+  const count = Math.max(1, project.rolesNeeded ?? 1)
+  if (project.tags && project.tags.length > 0) {
+    return project.tags.map(role => ({
+      role,
+      discipline: project.sector || 'Construction',
+      qty: 1,
+    }))
+  }
+  return [{
+    role: project.sector ? `${project.sector} Role` : 'Construction Role',
+    discipline: project.sector || 'Construction',
+    qty: count,
+  }]
+}
+
+function computeMatch(c: Candidate, positions: { role: string; discipline: string; qty: number }[]) {
+  const disciplines = [...new Set(positions.map(p => p.discipline.toLowerCase()))]
+  const roles       = [...new Set(positions.map(p => p.role.toLowerCase()))]
+  const reasons: { text: string; pass: boolean; icon: typeof Briefcase }[] = []
   let score = 0
 
-  const disciplineMatch = disciplines.includes(c.discipline)
+  // Discipline — case-insensitive match; if project has no specific discipline every candidate passes
+  const cDisc = (c.discipline ?? '').toLowerCase()
+  const disciplineMatch = disciplines.length === 0 || disciplines.some(d => d === 'construction' || d === cDisc || cDisc.includes(d) || d.includes(cDisc))
   reasons.push({
-    text: disciplineMatch ? `Discipline: ${c.discipline}` : `Discipline: ${c.discipline} — not needed`,
-    pass: disciplineMatch, icon: Briefcase
+    text: disciplineMatch ? `Discipline: ${c.discipline}` : `Discipline mismatch (${c.discipline})`,
+    pass: disciplineMatch, icon: Briefcase,
   })
-  if (disciplineMatch) score += 35
+  if (disciplineMatch) score += 30
 
-  const isQualified = c.status === 'qualified' || c.status === 'available'
-  reasons.push({ text: isQualified ? 'Ready to Work' : `Status: ${c.status}`, pass: isQualified, icon: CheckCircle })
-  if (isQualified) score += 25
+  // Role keyword match (bonus, not required)
+  const cRole = (c.role ?? '').toLowerCase()
+  const roleMatch = roles.length === 0 || roles.some(r => cRole.includes(r) || r.includes(cRole) || r === 'construction role')
+  reasons.push({
+    text: roleMatch ? `Role: ${c.role}` : `Role mismatch (${c.role})`,
+    pass: roleMatch, icon: Briefcase,
+  })
+  if (roleMatch) score += 15
 
+  // Status — case-insensitive; "available", "active", "qualified" all count as ready
+  const statusLower = (c.status ?? '').toLowerCase()
+  const isReady = ['available', 'active', 'qualified'].includes(statusLower)
+  reasons.push({ text: isReady ? `Status: ${c.status}` : `Status: ${c.status} (not active)`, pass: isReady, icon: CheckCircle })
+  if (isReady) score += 20
+
+  // Availability — compare against today, not a hardcoded past date
   const availDate = c.availability ? new Date(c.availability) : null
-  const availPass = !availDate || availDate <= new Date('2025-09-30')
-  reasons.push({ text: availPass ? `Available: ${c.availability || 'Now'}` : `Available: ${c.availability}`, pass: availPass, icon: Clock })
+  const today     = new Date()
+  today.setHours(0, 0, 0, 0)
+  const availPass = !availDate || availDate <= today
+  reasons.push({
+    text: availPass ? `Available: ${c.availability || 'Now'}` : `Available from: ${c.availability}`,
+    pass: availPass, icon: Clock,
+  })
   if (availPass) score += 20
 
+  // Certificates
   const hasCerts = !!(c.certificates && c.certificates.length > 0)
-  reasons.push({ text: hasCerts ? `${c.certificates?.length} certificates` : 'No certificates', pass: hasCerts, icon: Award })
+  reasons.push({ text: hasCerts ? `${c.certificates.length} certificate(s)` : 'No certificates', pass: hasCerts, icon: Award })
   if (hasCerts) score += 10
 
-  const expPass = c.experienceYears >= 4
-  reasons.push({ text: `${c.experienceYears} yrs experience`, pass: expPass, icon: Banknote })
-  if (expPass) score += 10
+  // Experience
+  const expPass = (c.experienceYears ?? 0) >= 2
+  reasons.push({ text: `${c.experienceYears ?? 0} yrs experience`, pass: expPass, icon: TrendingUp })
+  if (expPass) score += 5
 
-  return { score, reasons }
+  return { score: Math.min(100, score), reasons }
 }
 
 function scoreColor(s: number) { return s >= 80 ? '#15803d' : s >= 60 ? '#b8942e' : '#b91c1c' }
@@ -127,26 +141,34 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Matching() {
+  const {
+    projects,
+    candidates,
+    projectAssignments,
+    loading,
+    error,
+    assignCandidateToProject,
+    unassignCandidateFromProject,
+  } = useCrmData()
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [selectedPosition, setSelectedPosition] = useState<string>('')
   const [search, setSearch] = useState('')
   const [filterLocation, setFilterLocation] = useState('')
   const [filterDiscipline, setFilterDiscipline] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
-  const [assignedMap, setAssignedMap] = useState<Record<number, number[]>>({})
   const [projectPage, setProjectPage] = useState(1)
   const [candidatePage, setCandidatePage] = useState(1)
 
   const selectedProject = projects.find(p => p.id === selectedProjectId) ?? null
-  const positions = selectedProject ? (projectPositions[selectedProject.id] ?? []) : []
-  const assignedIds = selectedProject ? (assignedMap[selectedProject.id] ?? []) : []
+  const positions = selectedProject ? positionsForProject(selectedProject) : []
+  const assignedIds = selectedProject ? (projectAssignments[selectedProject.id] ?? []) : []
 
   const allLocations = [...new Set(candidates.map(c => c.location))].sort()
   const allDisciplines = [...new Set(candidates.map(c => c.discipline))].sort()
 
   const matchedCandidates = selectedProject
     ? candidates
-        .map(c => ({ ...c, ...computeMatch(c, selectedProject.id) }))
+        .map(c => ({ ...c, ...computeMatch(c, positions) }))
         .sort((a, b) => b.score - a.score)
     : []
 
@@ -154,6 +176,19 @@ export default function Matching() {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase()) && !c.role.toLowerCase().includes(search.toLowerCase())) return false
     if (filterLocation && c.location !== filterLocation) return false
     if (filterDiscipline && c.discipline !== filterDiscipline) return false
+    // Filter by selected position — keep candidates whose role/discipline matches that position
+    if (selectedPosition) {
+      const pos = positions.find(p => p.role === selectedPosition)
+      if (pos) {
+        const posLower  = pos.role.toLowerCase()
+        const discLower = pos.discipline.toLowerCase()
+        const cRole = c.role.toLowerCase()
+        const cDisc = c.discipline.toLowerCase()
+        const roleOk = posLower === 'construction role' || cRole.includes(posLower) || posLower.includes(cRole)
+        const discOk = discLower === 'construction' || cDisc === discLower || cDisc.includes(discLower) || discLower.includes(cDisc)
+        if (!roleOk && !discOk) return false
+      }
+    }
     return true
   })
 
@@ -171,21 +206,17 @@ export default function Matching() {
   const fmt = (d: string) =>
     d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Ongoing'
 
-  function assign(candidateId: number) {
+  async function assign(candidateId: number) {
     if (!selectedProject) return
-    setAssignedMap(prev => ({
-      ...prev,
-      [selectedProject.id]: [...(prev[selectedProject.id] ?? []), candidateId]
-    }))
+    await assignCandidateToProject(selectedProject.id, candidateId)
   }
 
-  function unassign(candidateId: number) {
+  async function unassign(candidateId: number) {
     if (!selectedProject) return
-    setAssignedMap(prev => ({
-      ...prev,
-      [selectedProject.id]: (prev[selectedProject.id] ?? []).filter(id => id !== candidateId)
-    }))
+    await unassignCandidateFromProject(selectedProject.id, candidateId)
   }
+
+  if (loading || error) return <DataState loading={loading} error={error} />
 
   // ── Project list view ─────────────────────────────────────────────────────
   if (!selectedProject) {
@@ -201,9 +232,9 @@ export default function Matching() {
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           {pagedProjects.map((p, i) => {
             const st = statusConfig[p.status] ?? { label: p.status, cls: 'badge-gray' }
-            const pos = projectPositions[p.id] ?? []
+            const pos = positionsForProject(p)
             const totalRoles = pos.reduce((a, r) => a + r.qty, 0)
-            const assigned = (assignedMap[p.id] ?? []).length
+            const assigned = (projectAssignments[p.id] ?? []).length
             return (
               <button
                 key={p.id}

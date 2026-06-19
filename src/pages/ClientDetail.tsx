@@ -1,7 +1,10 @@
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Building2, Mail, Phone, Users, FolderKanban, ChevronRight } from 'lucide-react'
-import { clientCompanies } from '../data/clients'
+import { useState } from 'react'
+import { Link, useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Building2, Mail, Phone, Users, FolderKanban, ChevronRight, Edit, Trash2 } from 'lucide-react'
+import { DataState } from '../components/DataState'
+import { useCrmData } from '../context/useCrmData'
 import { findRelatedProjects } from '../utils/clientMatching'
+import type { ClientCompany, ClientContact } from '../types/crm'
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -11,15 +14,92 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+type ClientEditForm = {
+  name: string
+  disciplines: string
+  contacts: ClientContact[]
+}
+
 export default function ClientDetail() {
   const { id } = useParams()
-  const client = clientCompanies.find(c => c.id === Number(id))
-  const relatedProjects = client ? findRelatedProjects(client) : []
+  const navigate = useNavigate()
+  const { clients, projects, loading, error, saveClient, deleteClient } = useCrmData()
+  const client = clients.find(c => c.id === Number(id))
+  const relatedProjects = client ? findRelatedProjects(client, projects) : []
+
+  const [showEdit, setShowEdit] = useState(false)
+  const [editForm, setEditForm] = useState<ClientEditForm>({ name: '', disciplines: '', contacts: [] })
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  function openEdit() {
+    if (!client) return
+    setEditForm({
+      name: client.name,
+      disciplines: client.disciplines.join(', '),
+      contacts: client.contacts.map(c => ({ ...c })),
+    })
+    setEditError(null)
+    setShowDeleteConfirm(false)
+    setShowEdit(true)
+  }
+
+  function editContactField(idx: number, field: keyof ClientContact, value: string) {
+    setEditForm(prev => ({
+      ...prev,
+      contacts: prev.contacts.map((c, i) => i === idx ? { ...c, [field]: value } : c),
+    }))
+  }
+
+  function addContactRow() {
+    setEditForm(prev => ({ ...prev, contacts: [...prev.contacts, { name: '', role: '', email: '', phone: '' }] }))
+  }
+
+  function removeContactRow(idx: number) {
+    setEditForm(prev => ({ ...prev, contacts: prev.contacts.filter((_, i) => i !== idx) }))
+  }
+
+  async function saveEdit() {
+    if (!client) return
+    if (!editForm.name.trim()) { setEditError('Company name is required.'); return }
+    setEditSaving(true)
+    setEditError(null)
+    try {
+      const disciplines = editForm.disciplines.split(',').map(d => d.trim()).filter(Boolean)
+      const contacts = editForm.contacts.filter(c => c.name.trim())
+      await saveClient(client.id, {
+        name: editForm.name.trim(),
+        disciplines: disciplines.length ? disciplines : ['General'],
+        contacts,
+      } as Partial<ClientCompany>)
+      setShowEdit(false)
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Failed to save.')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  async function confirmDelete() {
+    if (!client) return
+    setDeleting(true)
+    try {
+      await deleteClient(client.id)
+      navigate('/admin/clients')
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Failed to delete.')
+      setDeleting(false)
+    }
+  }
+
+  if (loading || error) return <DataState loading={loading} error={error} />
 
   if (!client) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        <Link to="/clients" className="btn-ghost" style={{ fontSize: '0.85rem' }}>
+        <Link to="/admin/clients" className="btn-ghost" style={{ fontSize: '0.85rem' }}>
           <ArrowLeft size={14} /> Back to Clients
         </Link>
         <div className="card" style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af' }}>
@@ -33,9 +113,12 @@ export default function ClientDetail() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
       {/* Nav */}
-      <Link to="/clients" className="btn-ghost" style={{ fontSize: '0.85rem' }}>
-        <ArrowLeft size={14} /> Back to Clients
-      </Link>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <Link to="/admin/clients" className="btn-ghost" style={{ fontSize: '0.85rem' }}>
+          <ArrowLeft size={14} /> Back to Clients
+        </Link>
+        <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={openEdit}><Edit size={13} />Edit Client</button>
+      </div>
 
       {/* Header card */}
       <div className="card" style={{ padding: '1.5rem' }}>
@@ -122,6 +205,93 @@ export default function ClientDetail() {
           </div>
         )}
       </div>
+
+      {/* ── Edit Client Modal ── */}
+      {showEdit && (
+        <div className="modal-overlay" onClick={() => { if (!editSaving && !deleting) setShowEdit(false) }}>
+          <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#111' }}>Edit Client</h2>
+              <button className="btn-ghost" style={{ padding: '0.25rem' }} onClick={() => setShowEdit(false)} disabled={editSaving || deleting}>✕</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Company Name *</label>
+                <input className="input" value={editForm.name} onChange={e => setEditForm(prev => ({ ...prev, name: e.target.value }))} placeholder="Company name" />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Trades / Disciplines</label>
+                <input className="input" value={editForm.disciplines} onChange={e => setEditForm(prev => ({ ...prev, disciplines: e.target.value }))} placeholder="e.g. Joinery, Steelwork" />
+              </div>
+            </div>
+
+            <div style={{ marginTop: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                <label className="label" style={{ margin: 0 }}>Contacts</label>
+                <button className="btn-secondary" style={{ fontSize: '0.78rem', padding: '0.3rem 0.6rem' }} onClick={addContactRow}>+ Add Contact</button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {editForm.contacts.map((c, idx) => (
+                  <div key={idx} style={{ padding: '0.6rem', background: '#f9fafb', border: '1px solid #f3f4f6', borderRadius: '0.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                      <input className="input" style={{ fontSize: '0.82rem' }} value={c.name} onChange={e => editContactField(idx, 'name', e.target.value)} placeholder="Name" />
+                      <input className="input" style={{ fontSize: '0.82rem' }} value={c.role ?? ''} onChange={e => editContactField(idx, 'role', e.target.value)} placeholder="Role" />
+                      <input className="input" style={{ fontSize: '0.82rem' }} value={c.email ?? ''} onChange={e => editContactField(idx, 'email', e.target.value)} placeholder="Email" />
+                      <input className="input" style={{ fontSize: '0.82rem' }} value={c.phone ?? ''} onChange={e => editContactField(idx, 'phone', e.target.value)} placeholder="Phone" />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.4rem' }}>
+                      <button className="btn-ghost" style={{ padding: '0.2rem', color: '#9ca3af' }} onClick={() => removeContactRow(idx)} title="Remove contact"><Trash2 size={13} /></button>
+                    </div>
+                  </div>
+                ))}
+                {editForm.contacts.length === 0 && (
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#9ca3af' }}>No contacts yet — add one above.</p>
+                )}
+              </div>
+            </div>
+
+            {editError && (
+              <div style={{ marginTop: '0.875rem', padding: '0.6rem 0.875rem', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '0.5rem', fontSize: '0.82rem', color: '#b91c1c' }}>
+                {editError}
+              </div>
+            )}
+
+            {/* Delete confirmation */}
+            {showDeleteConfirm ? (
+              <div style={{ marginTop: '1.25rem', padding: '1rem', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '0.5rem' }}>
+                <p style={{ margin: '0 0 0.875rem', fontSize: '0.85rem', fontWeight: 600, color: '#b91c1c' }}>
+                  Delete "{client.name}"? This cannot be undone.
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn-primary" style={{ fontSize: '0.82rem', background: '#dc2626', borderColor: '#dc2626' }} onClick={confirmDelete} disabled={deleting}>
+                    {deleting ? 'Deleting…' : 'Yes, Delete'}
+                  </button>
+                  <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.25rem' }}>
+                <button
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem 0.6rem', borderRadius: '0.4rem' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={editSaving}
+                >
+                  <Trash2 size={13} /> Delete Client
+                </button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => setShowEdit(false)} disabled={editSaving}>Cancel</button>
+                  <button className="btn-primary" style={{ fontSize: '0.82rem' }} onClick={saveEdit} disabled={editSaving}>
+                    {editSaving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

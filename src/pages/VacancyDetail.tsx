@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, MapPin, Calendar, Users, Edit, Plus, Star, Globe, Lock, CheckCircle, Clock } from 'lucide-react'
-import { vacancies, candidates, pipelineStages } from '../data/mock'
+import { DataState } from '../components/DataState'
+import { useCrmData } from '../context/useCrmData'
+import { pipelineStages } from '../lib/constants'
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   active:    { label: 'Active',   cls: 'badge-green' },
@@ -14,24 +16,44 @@ const priorityConfig: Record<string, string> = {
   High: 'badge-red', Medium: 'badge-yellow', Low: 'badge-gray'
 }
 
-const mockApplicationStages = ['New Application', 'Shortlisted', 'CV Sent', 'Interview Arranged', 'Offer']
-
 export default function VacancyDetail() {
   const { id } = useParams()
+  const {
+    vacancies,
+    candidates,
+    candidateAssignments,
+    updateCandidateAssignment,
+    removeCandidateAssignment,
+    loading,
+    error
+  } = useCrmData()
   const v = vacancies.find(v => v.id === Number(id))
   const [activeStageFilter, setActiveStageFilter] = useState('All')
+
+  if (loading || error) return <DataState loading={loading} error={error} />
 
   if (!v) return (
     <div style={{ textAlign: 'center', padding: '4rem' }}>
       <p>Vacancy not found.</p>
-      <Link to="/vacancies" className="btn-primary" style={{ marginTop: '1rem' }}>Back to Vacancies</Link>
+      <Link to="/admin/vacancies" className="btn-primary" style={{ marginTop: '1rem' }}>Back to Vacancies</Link>
     </div>
   )
 
-  const appCandidates = candidates.slice(0, 5).map((c, i) => ({
-    ...c,
-    stage: mockApplicationStages[i % mockApplicationStages.length]
-  }))
+  const appCandidates = candidateAssignments
+    .filter(a => a.vacancyId === Number(id))
+    .map(a => {
+      const candidate = candidates.find(c => c.id === a.candidateId)
+      if (!candidate) return null
+      return {
+        ...candidate,
+        stage: a.status === 'assigned' ? 'New Application' : a.status,
+        assignmentId: a.id,
+        notes: a.notes,
+        startDate: a.startDate,
+      }
+    })
+    .filter((c): c is NonNullable<typeof c> => c !== null)
+
   const filtered = activeStageFilter === 'All' ? appCandidates : appCandidates.filter(c => c.stage === activeStageFilter)
 
   const stageCounts: Record<string, number> = {}
@@ -40,7 +62,7 @@ export default function VacancyDetail() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <Link to="/vacancies" className="btn-ghost"><ArrowLeft size={15} /> Back to Vacancies</Link>
+        <Link to="/admin/vacancies" className="btn-ghost"><ArrowLeft size={15} /> Back to Vacancies</Link>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn-secondary"><Edit size={14} />Edit</button>
           <button className="btn-primary"><Users size={14} />Find Candidates</button>
@@ -53,7 +75,7 @@ export default function VacancyDetail() {
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
               <h1 className="page-title">{v.title}</h1>
-              <span className={`badge ${statusConfig[v.status].cls}`}>{statusConfig[v.status].label}</span>
+              <span className={`badge ${statusConfig[v.status]?.cls ?? 'badge-gray'}`}>{statusConfig[v.status]?.label ?? v.status}</span>
               <span className="badge badge-gray">{v.type}</span>
               {v.priority && <span className={`badge ${priorityConfig[v.priority] || 'badge-gray'}`}>{v.priority} Priority</span>}
               {v.visibility === 'Public'
@@ -120,7 +142,7 @@ export default function VacancyDetail() {
           </div>
         </div>
         <div style={{ height: 5, background: '#f1f5f9', borderRadius: '9999px', marginTop: '1rem', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${Math.round((v.interviews / v.applications) * 100)}%`, background: 'linear-gradient(90deg,#b8942e,#34d399)', borderRadius: '9999px' }} />
+          <div style={{ height: '100%', width: `${v.applications > 0 ? Math.round((v.interviews / v.applications) * 100) : 0}%`, background: 'linear-gradient(90deg,#b8942e,#34d399)', borderRadius: '9999px' }} />
         </div>
         {activeStageFilter !== 'All' && (
           <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -140,7 +162,7 @@ export default function VacancyDetail() {
 
           {/* Stage filter pills */}
           <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            {['All', ...mockApplicationStages].map(s => (
+            {['All', ...pipelineStages.map(s => s.key)].map(s => (
               <button
                 key={s}
                 onClick={() => setActiveStageFilter(s)}
@@ -169,9 +191,47 @@ export default function VacancyDetail() {
                     {[1,2,3,4,5].map(s => <Star key={s} size={11} fill={s <= c.rating ? '#b8942e' : 'none'} color={s <= c.rating ? '#b8942e' : '#d1d5db'} />)}
                   </div>
                   <span className={`badge ${ps?.badge || 'badge-gray'}`} style={{ flexShrink: 0 }}>{c.stage}</span>
-                  <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0, alignItems: 'center' }}>
                     <Link to={`/candidates/${c.id}`} className="btn-ghost" style={{ padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}>Profile</Link>
-                    <button className="btn-secondary" style={{ padding: '0.3rem 0.5rem', fontSize: '0.9rem' }}>Move</button>
+                    <select
+                      value={c.stage}
+                      onChange={async (e) => {
+                        try {
+                          await updateCandidateAssignment(c.assignmentId, { status: e.target.value })
+                        } catch (err) {
+                          alert(err instanceof Error ? err.message : 'Failed to update stage')
+                        }
+                      }}
+                      style={{
+                        padding: '0.25rem 0.5rem',
+                        fontSize: '0.85rem',
+                        borderRadius: '0.375rem',
+                        border: '1px solid #d1d5db',
+                        background: '#ffffff',
+                        color: '#000000',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {pipelineStages.map(stage => (
+                        <option key={stage.key} value={stage.key}>{stage.key}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Remove ${c.name} from this vacancy?`)) {
+                          try {
+                            await removeCandidateAssignment(c.assignmentId)
+                          } catch (err) {
+                            alert(err instanceof Error ? err.message : 'Failed to remove candidate')
+                          }
+                        }
+                      }}
+                      className="btn-ghost"
+                      style={{ padding: '0.3rem 0.5rem', fontSize: '0.9rem', color: '#dc2626' }}
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
               )

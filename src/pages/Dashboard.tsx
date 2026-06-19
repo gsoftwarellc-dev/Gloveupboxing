@@ -3,15 +3,12 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts'
 import {
-  Banknote, Briefcase, Building2, Calendar, CheckCircle,
-  Clock, FolderKanban, Mail, TrendingUp, Users
+  Banknote, Briefcase, Building2, CheckCircle,
+  FolderKanban, TrendingUp, Users, UserPlus, Briefcase as VacancyIcon
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { projects } from '../data/mock'
-import { clientCompanies } from '../data/clients'
-
-// Total contacts across all client companies
-const totalClientContacts = clientCompanies.reduce((sum, c) => sum + c.contacts.length, 0)
+import { DataState } from '../components/DataState'
+import { useCrmData } from '../context/useCrmData'
 
 // Parse "£20m" / "£8.3m (Est)" style values into millions
 function parseValueMillions(value: string | number): number {
@@ -20,97 +17,14 @@ function parseValueMillions(value: string | number): number {
   return match ? parseFloat(match[1]) : 0
 }
 
-const totalPipelineValue = projects.reduce((sum, p) => sum + parseValueMillions(p.value), 0)
-const totalRolesNeeded = projects.reduce((sum, p) => sum + (p.rolesNeeded ?? 0), 0)
-const avgOpportunityScore = projects.length
-  ? Math.round(projects.reduce((sum, p) => sum + (p.opportunityScore ?? 0), 0) / projects.length)
-  : 0
-
-// Projects by sector
-const sectorCounts = projects.reduce<Record<string, number>>((acc, p) => {
-  const s = p.sector ?? 'Other'
-  acc[s] = (acc[s] ?? 0) + 1
-  return acc
-}, {})
-const colors = ['#b8942e', '#d4af5a', '#8a6e1e', '#6b5218', '#3b82f6', '#10b981', '#ef4444', '#94a3b8', '#c084fc', '#60a5fa']
-const sectorData = Object.entries(sectorCounts)
-  .map(([name, value], i) => ({ name, value, color: colors[i % colors.length] }))
-  .sort((a, b) => b.value - a.value)
-
-// Pipeline value by sector
-const valueBySectorMap = projects.reduce<Record<string, number>>((acc, p) => {
-  const sector = p.sector ?? 'Other'
-  acc[sector] = (acc[sector] ?? 0) + parseValueMillions(p.value)
-  return acc
-}, {})
-const valueBySector = Object.entries(valueBySectorMap)
-  .map(([name, value], i) => ({
-    name,
-    value: Math.round(value * 10) / 10,
-    color: colors[i % colors.length],
-  }))
-  .sort((a, b) => b.value - a.value)
-  .slice(0, 8)
-
-// Projects by stage
-const stageOrder = ['Pipeline', 'Tender', 'Pre-Construction', 'Mobilising', 'On Site']
-const stageData = stageOrder.map(stage => ({
-  stage,
-  count: projects.filter(p => p.stage === stage).length,
-}))
-const rolesByStage = stageOrder.map(stage => ({
-  stage,
-  roles: projects
-    .filter(p => p.stage === stage)
-    .reduce((sum, p) => sum + (p.rolesNeeded ?? 0), 0),
-}))
-
-// Top disciplines by client contact count
-const disciplineCounts = clientCompanies.reduce<Record<string, number>>((acc, c) => {
-  for (const d of c.disciplines) {
-    acc[d] = (acc[d] ?? 0) + c.contacts.length
-  }
-  return acc
-}, {})
-const disciplineData = Object.entries(disciplineCounts)
-  .map(([discipline, contacts]) => ({ discipline, contacts }))
-  .sort((a, b) => b.contacts - a.contacts)
-  .slice(0, 6)
-
-// Highest-priority active projects for the highlights list
-const priorityProjects = projects
-  .filter(p => p.priority === 'Priority 1')
-  .slice(0, 5)
-
-// Main contractors and opportunity ranking
-const contractorCounts = projects.reduce<Record<string, number>>((acc, p) => {
-  if (p.mainContractor) {
-    acc[p.mainContractor] = (acc[p.mainContractor] ?? 0) + 1
-  }
-  return acc
-}, {})
-const topContractors = Object.entries(contractorCounts)
-  .map(([name, count]) => ({ name, count }))
-  .sort((a, b) => b.count - a.count)
-  .slice(0, 6)
-const topOpportunities = [...projects]
-  .sort((a, b) => (b.opportunityScore ?? 0) - (a.opportunityScore ?? 0))
-  .slice(0, 8)
-
-const activities = [
-  { id: 1, type: 'meeting', user: 'Tom Bradley', entity: 'James Holloway', time: '8 Jun 2025, 14:32', note: 'Discussed new opportunities in Manchester. Available from July.' },
-  { id: 2, type: 'placement', user: 'Emma Clarke', entity: 'Sarah Mitchell → Costain Ltd', time: '8 Jun 2025, 11:15', note: 'Placed as Structural Engineer. Start date: 16 Jun 2025.' },
-  { id: 3, type: 'email', user: 'Tom Bradley', entity: '45 Civil Engineers', time: '7 Jun 2025, 16:45', note: 'Bulk email: New Site Manager opportunities in Manchester. 32 opened.' },
-  { id: 4, type: 'meeting', user: 'Emma Clarke', entity: 'Balfour Beatty – David Harris', time: '7 Jun 2025, 11:00', note: 'Client meeting. Groundworks project starting Sept, 3 foremen needed.' },
-  { id: 5, type: 'email', user: 'Mark Richards', entity: 'Lisa Park', time: '6 Jun 2025, 15:30', note: 'Sent vacancy details for Groundworks Foreman role at Costain Ltd.' },
-  { id: 6, type: 'placement', user: 'Mark Richards', entity: 'Ryan Moss → Mace Group', time: '5 Jun 2025, 09:00', note: 'Placed as Project Manager. Start date: 23 Jun 2025.' },
-]
-
-const activityTypeConfig = {
-  meeting: { icon: Users, color: '#60a5fa', label: 'Meeting' },
-  email: { icon: Mail, color: '#c084fc', label: 'Email' },
-  placement: { icon: CheckCircle, color: '#34d399', label: 'Placement' },
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
+
+const colors = ['#b8942e', '#d4af5a', '#8a6e1e', '#6b5218', '#3b82f6', '#10b981', '#ef4444', '#94a3b8', '#c084fc', '#60a5fa']
 
 type StatCardProps = {
   icon: typeof FolderKanban
@@ -154,6 +68,81 @@ const TooltipStyle = {
 }
 
 export default function Dashboard() {
+  const { projects, clients, candidates, vacancies, candidateAssignments, loading, error } = useCrmData()
+
+  if (loading || error) return <DataState loading={loading} error={error} />
+
+  const totalClientContacts = clients.reduce((sum, c) => sum + c.contacts.length, 0)
+  const totalPipelineValue = projects.reduce((sum, p) => sum + parseValueMillions(p.value), 0)
+  const totalRolesNeeded = projects.reduce((sum, p) => sum + (p.rolesNeeded ?? 0), 0)
+  const avgOpportunityScore = projects.length
+    ? Math.round(projects.reduce((sum, p) => sum + (p.opportunityScore ?? 0), 0) / projects.length)
+    : 0
+
+  const sectorCounts = projects.reduce<Record<string, number>>((acc, p) => {
+    const sector = p.sector ?? 'Other'
+    acc[sector] = (acc[sector] ?? 0) + 1
+    return acc
+  }, {})
+  const sectorData = Object.entries(sectorCounts)
+    .map(([name, value], i) => ({ name, value, color: colors[i % colors.length] }))
+    .sort((a, b) => b.value - a.value)
+
+  const valueBySectorMap = projects.reduce<Record<string, number>>((acc, p) => {
+    const sector = p.sector ?? 'Other'
+    acc[sector] = (acc[sector] ?? 0) + parseValueMillions(p.value)
+    return acc
+  }, {})
+  const valueBySector = Object.entries(valueBySectorMap)
+    .map(([name, value], i) => ({
+      name,
+      value: Math.round(value * 10) / 10,
+      color: colors[i % colors.length],
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8)
+
+  const stageOrder = ['Pipeline', 'Tender', 'Pre-Construction', 'Mobilising', 'On Site']
+  const stageData = stageOrder.map(stage => ({
+    stage,
+    count: projects.filter(p => p.stage === stage).length,
+  }))
+  const rolesByStage = stageOrder.map(stage => ({
+    stage,
+    roles: projects
+      .filter(p => p.stage === stage)
+      .reduce((sum, p) => sum + (p.rolesNeeded ?? 0), 0),
+  }))
+
+  const disciplineCounts = clients.reduce<Record<string, number>>((acc, c) => {
+    for (const d of c.disciplines) {
+      acc[d] = (acc[d] ?? 0) + c.contacts.length
+    }
+    return acc
+  }, {})
+  const disciplineData = Object.entries(disciplineCounts)
+    .map(([discipline, contacts]) => ({ discipline, contacts }))
+    .sort((a, b) => b.contacts - a.contacts)
+    .slice(0, 6)
+
+  const priorityProjects = projects
+    .filter(p => p.priority === 'Priority 1')
+    .slice(0, 5)
+
+  const contractorCounts = projects.reduce<Record<string, number>>((acc, p) => {
+    if (p.mainContractor) {
+      acc[p.mainContractor] = (acc[p.mainContractor] ?? 0) + 1
+    }
+    return acc
+  }, {})
+  const topContractors = Object.entries(contractorCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6)
+  const topOpportunities = [...projects]
+    .sort((a, b) => (b.opportunityScore ?? 0) - (a.opportunityScore ?? 0))
+    .slice(0, 8)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Header */}
@@ -167,7 +156,7 @@ export default function Dashboard() {
       {/* KPI cards */}
       <div className="dashboard-grid-4">
         <StatCard icon={FolderKanban} label="Active Projects" value={projects.length} color="#f97316" />
-        <StatCard icon={Building2} label="Client Companies" value={clientCompanies.length} color="#60a5fa" />
+        <StatCard icon={Building2} label="Client Companies" value={clients.length} color="#60a5fa" />
         <StatCard icon={Users} label="Client Contacts" value={totalClientContacts.toLocaleString()} color="#b8942e" />
         <StatCard icon={Banknote} label="Pipeline Value" value={`£${totalPipelineValue.toFixed(0)}m+`} color="#fbbf24" />
       </div>
@@ -176,7 +165,7 @@ export default function Dashboard() {
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
           <h2 className="section-title">Priority 1 Projects</h2>
-          <Link to="/projects" style={{ fontSize: '0.82rem', color: '#b8942e', textDecoration: 'none' }}>View all</Link>
+          <Link to="/admin/projects" style={{ fontSize: '0.82rem', color: '#b8942e', textDecoration: 'none' }}>View all</Link>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {priorityProjects.map(p => (
@@ -368,7 +357,7 @@ export default function Dashboard() {
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <h2 className="section-title">Top Opportunities</h2>
-            <Link to="/projects" style={{ fontSize: '0.82rem', color: '#b8942e', textDecoration: 'none' }}>View all</Link>
+            <Link to="/admin/projects" style={{ fontSize: '0.82rem', color: '#b8942e', textDecoration: 'none' }}>View all</Link>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {topOpportunities.map(project => (
@@ -406,61 +395,169 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ paddingTop: '0.25rem' }}>
-        <h2 className="page-title">Recent Activity</h2>
-        <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>Recent CRM activity log</p>
-      </div>
+      {/* ── Recent Activity (derived from real DB records) ── */}
+      {(() => {
+        // Build a unified activity feed from real records
+        type ActivityItem = {
+          id: string
+          type: 'candidate' | 'placement' | 'vacancy' | 'project'
+          date: string
+          title: string
+          subtitle: string
+          note: string
+          link: string
+        }
 
-      <div className="dashboard-grid-4">
-        {[
-          { label: 'Today', value: 3, color: '#b8942e', icon: Clock },
-          { label: 'This Week', value: 14, color: '#60a5fa', icon: Calendar },
-          { label: 'Emails', value: 12, color: '#c084fc', icon: Mail },
-          { label: 'Placements', value: 2, color: '#34d399', icon: CheckCircle },
-        ].map(item => (
-          <div key={item.label} className="card" style={{ padding: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <item.icon size={20} style={{ color: item.color, flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700, color: item.color, lineHeight: 1 }}>{item.value}</div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.15rem' }}>{item.label}</div>
+        const items: ActivityItem[] = []
+
+        // Recent candidates added
+        candidates
+          .filter(c => c.dateAdded)
+          .slice(0, 10)
+          .forEach(c => {
+            items.push({
+              id: `cand-${c.id}`,
+              type: 'candidate',
+              date: c.dateAdded,
+              title: c.name,
+              subtitle: [c.role, c.discipline, c.location].filter(Boolean).join(' · '),
+              note: `New candidate added — ${c.status === 'qualified' ? 'ready to work' : c.status}${c.source ? ` · Source: ${c.source}` : ''}`,
+              link: `/candidates/${c.id}`,
+            })
+          })
+
+        // Recent placements
+        candidateAssignments
+          .filter(a => a.startDate)
+          .slice(0, 10)
+          .forEach(a => {
+            const cand = candidates.find(c => c.id === a.candidateId)
+            items.push({
+              id: `place-${a.id}`,
+              type: 'placement',
+              date: a.startDate ?? '',
+              title: cand ? `${cand.name} → ${a.client ?? 'Client'}` : `Assignment #${a.id}`,
+              subtitle: [a.vacancy, a.project].filter(Boolean).join(' · '),
+              note: `Candidate placed${a.startDate ? ` · Start date: ${formatDate(a.startDate)}` : ''}${a.notes ? ` · ${a.notes}` : ''}`,
+              link: cand ? `/candidates/${cand.id}` : '/candidates',
+            })
+          })
+
+        // Recent vacancies posted
+        vacancies
+          .filter(v => v.dateAdded)
+          .slice(0, 6)
+          .forEach(v => {
+            items.push({
+              id: `vac-${v.id}`,
+              type: 'vacancy',
+              date: v.dateAdded,
+              title: v.title,
+              subtitle: [v.client, v.location, v.discipline].filter(Boolean).join(' · '),
+              note: `Vacancy posted${v.published ? ' · Live on website' : ' · Internal only'}${v.salary ? ` · ${v.salary}` : ''}`,
+              link: `/vacancies/${v.id}`,
+            })
+          })
+
+        // Recent projects added
+        projects
+          .filter(p => p.createdAt)
+          .slice(0, 6)
+          .forEach(p => {
+            items.push({
+              id: `proj-${p.id}`,
+              type: 'project',
+              date: p.createdAt ?? '',
+              title: p.name,
+              subtitle: [p.client, p.sector, p.location].filter(Boolean).join(' · '),
+              note: `Project added to pipeline${p.value ? ` · Value: ${p.value}` : ''}${p.stage ? ` · Stage: ${p.stage}` : ''}`,
+              link: `/projects/${p.id}`,
+            })
+          })
+
+        // Sort by date descending, take top 15
+        const sorted = items
+          .filter(i => i.date)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 15)
+
+        const typeConfig = {
+          candidate: { color: '#60a5fa', label: 'New Candidate', Icon: UserPlus },
+          placement:  { color: '#34d399', label: 'Placement',     Icon: CheckCircle },
+          vacancy:    { color: '#c084fc', label: 'Vacancy',        Icon: VacancyIcon },
+          project:    { color: '#b8942e', label: 'Project',        Icon: FolderKanban },
+        }
+
+        // Summary counts
+        const placementCount = candidateAssignments.length
+        const candidateCount = candidates.length
+        const vacancyCount = vacancies.filter(v => v.status === 'active').length
+
+        return (
+          <>
+            <div style={{ paddingTop: '0.25rem' }}>
+              <h2 className="page-title">Recent Activity</h2>
+              <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>Latest additions and placements from your real CRM data</p>
             </div>
-          </div>
-        ))}
-      </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {activities.map((activity, index) => {
-          const config = activityTypeConfig[activity.type as keyof typeof activityTypeConfig]
-          const Icon = config.icon
-
-          return (
-            <div
-              key={activity.id}
-              className="activity-row"
-              style={{
-                display: 'flex', alignItems: 'flex-start', gap: '1rem',
-                padding: '0.875rem 1.25rem',
-                borderBottom: index < activities.length - 1 ? '1px solid #f3f4f6' : 'none',
-              }}
-            >
-              <div style={{ width: 36, height: 36, borderRadius: '0.5rem', flexShrink: 0, background: `${config.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
-                <Icon size={16} style={{ color: config.color }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="activity-row-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#111' }}>{activity.entity}</span>
-                  <div className="activity-row-meta" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{activity.time}</span>
-                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>by {activity.user}</span>
-                    <span style={{ padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 600, background: `${config.color}15`, color: config.color }}>{config.label}</span>
+            <div className="dashboard-grid-3">
+              {[
+                { label: 'Total Candidates', value: candidateCount, color: '#60a5fa', Icon: Users },
+                { label: 'Active Vacancies', value: vacancyCount, color: '#c084fc', Icon: VacancyIcon },
+                { label: 'Total Placements', value: placementCount, color: '#34d399', Icon: CheckCircle },
+              ].map(item => (
+                <div key={item.label} className="card" style={{ padding: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <item.Icon size={20} style={{ color: item.color, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 700, color: item.color, lineHeight: 1 }}>{item.value}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.15rem' }}>{item.label}</div>
                   </div>
                 </div>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.5 }}>{activity.note}</p>
-              </div>
+              ))}
             </div>
-          )
-        })}
-      </div>
+
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              {sorted.length === 0 && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af', fontSize: '0.85rem' }}>
+                  No recent activity yet. Add candidates, post vacancies, or create projects to see activity here.
+                </div>
+              )}
+              {sorted.map((activity, index) => {
+                const cfg = typeConfig[activity.type]
+                return (
+                  <Link
+                    key={activity.id}
+                    to={activity.link}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '1rem',
+                      padding: '0.875rem 1.25rem',
+                      borderBottom: index < sorted.length - 1 ? '1px solid #f3f4f6' : 'none',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    <div style={{ width: 36, height: 36, borderRadius: '0.5rem', flexShrink: 0, background: `${cfg.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
+                      <cfg.Icon size={16} style={{ color: cfg.color }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#111' }}>{activity.title}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{formatDate(activity.date)}</span>
+                          <span style={{ padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: 600, background: `${cfg.color}15`, color: cfg.color }}>{cfg.label}</span>
+                        </div>
+                      </div>
+                      {activity.subtitle && (
+                        <p style={{ margin: '0.1rem 0 0', fontSize: '0.78rem', color: '#b8942e', fontWeight: 600 }}>{activity.subtitle}</p>
+                      )}
+                      <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: '#6b7280', lineHeight: 1.5 }}>{activity.note}</p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </>
+        )
+      })()}
     </div>
   )
 }

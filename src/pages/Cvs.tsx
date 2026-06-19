@@ -3,15 +3,14 @@ import {
   FileText, Search, Copy, Check, Sparkles, Wand2, ClipboardPaste,
   AlertTriangle, Star, X, Trophy, Download, Printer, Mail, MapPin, Building2,
 } from 'lucide-react'
-import { cvs as initialCvs, type CvRecord } from '../data/cvs'
+import { DataState } from '../components/DataState'
+import { useCrmData } from '../context/useCrmData'
+import type { CvRecord } from '../types/crm'
 import {
-  analyzeCv, rankProfiles, formatCv, AI_ENABLED,
+  analyzeCv, rankProfiles, formatCv,
   type CvAnalysis, type RankedProfile, type FormattedCv,
 } from '../utils/aiClient'
 import { buildFormattedCvHtml } from '../utils/cvTemplate'
-
-const allCvs: CvRecord[] = initialCvs.map(c => ({ ...c }))
-const allDisciplines = Array.from(new Set(allCvs.map(c => c.discipline).filter(Boolean))).sort()
 
 function CopyButton({ text, label = 'Copy', className = 'btn-secondary' }: { text: string; label?: string; className?: string }) {
   const [copied, setCopied] = useState(false)
@@ -42,9 +41,10 @@ function ScoreBadge({ score }: { score: number }) {
 }
 
 export default function Cvs() {
+  const { cvs: allCvs, loading, error } = useCrmData()
   const [search, setSearch] = useState('')
   const [disciplineFilter, setDisciplineFilter] = useState('All')
-  const [selectedId, setSelectedId] = useState<string | null>(allCvs[0]?.id ?? null)
+  const [selectedIdOverride, setSelectedIdOverride] = useState<string | null>(null)
 
   // Per-CV analysis
   const [analysis, setAnalysis] = useState<CvAnalysis | null>(null)
@@ -59,6 +59,8 @@ export default function Cvs() {
   const [ranking, setRanking] = useState(false)
   const [ranked, setRanked] = useState<RankedProfile[] | null>(null)
 
+  const allDisciplines = Array.from(new Set(allCvs.map(c => c.discipline).filter(Boolean))).sort()
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return allCvs.filter(c => {
@@ -71,12 +73,15 @@ export default function Cvs() {
         c.rawText.toLowerCase().includes(q)
       )
     })
-  }, [search, disciplineFilter])
+  }, [allCvs, search, disciplineFilter])
 
+  const selectedId = selectedIdOverride ?? allCvs[0]?.id ?? null
   const selected = allCvs.find(c => c.id === selectedId) ?? null
 
+  if (loading || error) return <DataState loading={loading} error={error} />
+
   function openCv(cv: CvRecord) {
-    setSelectedId(cv.id)
+    setSelectedIdOverride(cv.id)
     setAnalysis(null)
     setFormatted(null)
   }
@@ -164,12 +169,6 @@ export default function Cvs() {
         </div>
       </div>
 
-      {!AI_ENABLED && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.7rem 1rem', background: 'rgba(184,148,46,0.08)', border: '1px solid rgba(184,148,46,0.25)', borderRadius: '0.5rem', fontSize: '0.95rem', color: '#8a6d1f' }}>
-          <Sparkles size={16} />
-          AI features run in preview mode (no backend connected yet). Analysis and ranking use on-device heuristics — connect an AI backend to enable real Claude-powered assessment.
-        </div>
-      )}
 
       {/* AI ranking across the list */}
       <div className="card" style={{ padding: '1.25rem' }}>

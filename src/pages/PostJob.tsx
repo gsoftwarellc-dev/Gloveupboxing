@@ -2,11 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Globe, Lock, MapPin, Briefcase, ChevronRight } from 'lucide-react'
 
-import { clients as mockClients, projects as mockProjects } from '../data/mock'
+import { DataState } from '../components/DataState'
+import { useCrmData } from '../context/useCrmData'
 
 const disciplines = ['Civil', 'Structural', 'Groundworks', 'MEP', 'Commercial', 'H&S']
-const clients = mockClients.length > 0 ? mockClients.map(c => c.name).sort() : ['Balfour Beatty', 'Mace Group', 'Skanska UK']
-const projects = ['— None —', ...mockProjects.map(p => p.name).sort()]
 const recruiters = ['Tom Bradley', 'Emma Clarke', 'Mark Richards', 'Priya Sharma']
 const certs = ['SMSTS', 'SSSTS', 'CSCS Gold Card', 'CSCS Black Card', 'CSCS Blue Card', 'First Aid at Work', 'CPCS', 'NPORS', 'NEBOSH Diploma', 'IOSH Managing Safely', 'PMP', 'PRINCE2 Practitioner', 'MRICS', 'IStructE Chartership', 'ECS Gold Card', 'CIBSE Membership']
 
@@ -31,13 +30,84 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export default function PostJob() {
   const navigate = useNavigate()
+  const { clients, projects, addVacancy, loading, error } = useCrmData()
   const [visibility, setVisibility] = useState<'public' | 'private'>('public')
   const [selectedCerts, setSelectedCerts] = useState<string[]>([])
   const [submitted, setSubmitted] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [form, setForm] = useState({
+    title: '',
+    discipline: 'Civil',
+    type: 'Permanent',
+    salary: '',
+    priority: 'High',
+    description: '',
+    location: '',
+    postcode: '',
+    clientId: '',
+    projectId: '',
+    recruiter: recruiters[0],
+    startDate: '',
+    deadline: '',
+  })
+
+  const clientOptions = clients.map(c => ({ id: String(c.id), name: c.name })).sort((a, b) => a.name.localeCompare(b.name))
+  const projectOptions = projects.map(p => ({ id: String(p.id), name: p.name })).sort((a, b) => a.name.localeCompare(b.name))
+
+  function update(field: keyof typeof form, value: string) {
+    setForm(prev => ({ ...prev, [field]: value }))
+    setSaveError('')
+  }
 
   function toggleCert(c: string) {
     setSelectedCerts(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
   }
+
+  async function submitVacancy() {
+    if (!form.title.trim()) {
+      setSaveError('Job title is required.')
+      return
+    }
+
+    const selectedClient = clients.find(client => String(client.id) === form.clientId)
+    const selectedProject = projects.find(project => String(project.id) === form.projectId)
+
+    setSaving(true)
+    try {
+      await addVacancy({
+        title: form.title.trim(),
+        clientId: selectedClient?.id,
+        client: selectedClient?.name ?? '',
+        projectId: selectedProject?.id,
+        project: selectedProject?.name ?? '',
+        discipline: form.discipline,
+        type: form.type,
+        salary: form.salary,
+        priority: form.priority,
+        description: form.description,
+        location: form.location,
+        postcode: form.postcode,
+        recruiter: form.recruiter,
+        deadline: form.deadline,
+        dateAdded: new Date().toISOString().slice(0, 10),
+        requiredCerts: selectedCerts,
+        visibility: visibility === 'public' ? 'Public' : 'Private',
+        published: visibility === 'public',
+        status: 'active',
+        applications: 0,
+        shortlisted: 0,
+        interviews: 0,
+      })
+      setSubmitted(true)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Unable to post vacancy.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading || error) return <DataState loading={loading} error={error} />
 
   if (submitted) {
     return (
@@ -53,7 +123,7 @@ export default function PostJob() {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => setSubmitted(false)}>Post Another</button>
-          <button className="btn-primary" style={{ fontSize: '0.82rem' }} onClick={() => navigate('/vacancies')}>View Vacancies</button>
+          <button className="btn-primary" style={{ fontSize: '0.82rem' }} onClick={() => navigate('/admin/vacancies')}>View Vacancies</button>
         </div>
       </div>
     )
@@ -63,7 +133,7 @@ export default function PostJob() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: 860 }}>
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.78rem', color: '#6b7280' }}>
-        <span style={{ cursor: 'pointer', color: '#b8942e', fontWeight: 600 }} onClick={() => navigate('/vacancies')}>Vacancies</span>
+        <span style={{ cursor: 'pointer', color: '#b8942e', fontWeight: 600 }} onClick={() => navigate('/admin/vacancies')}>Vacancies</span>
         <ChevronRight size={13} />
         <span>Post New Job</span>
       </div>
@@ -82,26 +152,26 @@ export default function PostJob() {
           <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <SectionLabel>Role Details</SectionLabel>
             <Field label="Job Title" required>
-              <input className="input" style={{ fontSize: '0.82rem' }} placeholder="e.g. Senior Site Manager" />
+              <input className="input" style={{ fontSize: '0.82rem' }} placeholder="e.g. Senior Site Manager" value={form.title} onChange={e => update('title', e.target.value)} />
             </Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <Field label="Discipline" required>
-                <select className="input" style={{ fontSize: '0.82rem' }}>
+                <select className="input" style={{ fontSize: '0.82rem' }} value={form.discipline} onChange={e => update('discipline', e.target.value)}>
                   {disciplines.map(d => <option key={d}>{d}</option>)}
                 </select>
               </Field>
               <Field label="Employment Type" required>
-                <select className="input" style={{ fontSize: '0.82rem' }}>
+                <select className="input" style={{ fontSize: '0.82rem' }} value={form.type} onChange={e => update('type', e.target.value)}>
                   <option>Permanent</option>
                   <option>Contract</option>
                   <option>Temporary</option>
                 </select>
               </Field>
               <Field label="Salary / Day Rate" required>
-                <input className="input" style={{ fontSize: '0.82rem' }} placeholder="e.g. £60,000 – £70,000" />
+                <input className="input" style={{ fontSize: '0.82rem' }} placeholder="e.g. £60,000 – £70,000" value={form.salary} onChange={e => update('salary', e.target.value)} />
               </Field>
               <Field label="Priority">
-                <select className="input" style={{ fontSize: '0.82rem' }}>
+                <select className="input" style={{ fontSize: '0.82rem' }} value={form.priority} onChange={e => update('priority', e.target.value)}>
                   <option>High</option>
                   <option>Medium</option>
                   <option>Low</option>
@@ -113,6 +183,8 @@ export default function PostJob() {
                 className="input"
                 style={{ fontSize: '0.82rem', resize: 'vertical', minHeight: 130 } as React.CSSProperties}
                 placeholder="Describe the role, key responsibilities, and what you're looking for in a candidate..."
+                value={form.description}
+                onChange={e => update('description', e.target.value)}
               />
             </Field>
           </div>
@@ -124,11 +196,11 @@ export default function PostJob() {
               <Field label="City" required>
                 <div style={{ position: 'relative' }}>
                   <MapPin size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-                  <input className="input" style={{ fontSize: '0.82rem', paddingLeft: '1.75rem' }} placeholder="e.g. Manchester" />
+                  <input className="input" style={{ fontSize: '0.82rem', paddingLeft: '1.75rem' }} placeholder="e.g. Manchester" value={form.location} onChange={e => update('location', e.target.value)} />
                 </div>
               </Field>
               <Field label="Postcode" required>
-                <input className="input" style={{ fontSize: '0.82rem' }} placeholder="e.g. M1 1AA" />
+                <input className="input" style={{ fontSize: '0.82rem' }} placeholder="e.g. M1 1AA" value={form.postcode} onChange={e => update('postcode', e.target.value)} />
               </Field>
             </div>
           </div>
@@ -169,13 +241,15 @@ export default function PostJob() {
           <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
             <SectionLabel>Client & Project</SectionLabel>
             <Field label="Client" required>
-              <select className="input" style={{ fontSize: '0.82rem' }}>
-                {clients.map(c => <option key={c}>{c}</option>)}
+              <select className="input" style={{ fontSize: '0.82rem' }} value={form.clientId} onChange={e => update('clientId', e.target.value)}>
+                <option value="">Select client...</option>
+                {clientOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </Field>
             <Field label="Linked Project">
-              <select className="input" style={{ fontSize: '0.82rem' }}>
-                {projects.map(p => <option key={p}>{p}</option>)}
+              <select className="input" style={{ fontSize: '0.82rem' }} value={form.projectId} onChange={e => update('projectId', e.target.value)}>
+                <option value="">— None —</option>
+                {projectOptions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </Field>
           </div>
@@ -184,15 +258,15 @@ export default function PostJob() {
           <div className="card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
             <SectionLabel>Assignment</SectionLabel>
             <Field label="Assigned Recruiter">
-              <select className="input" style={{ fontSize: '0.82rem' }}>
+              <select className="input" style={{ fontSize: '0.82rem' }} value={form.recruiter} onChange={e => update('recruiter', e.target.value)}>
                 {recruiters.map(r => <option key={r}>{r}</option>)}
               </select>
             </Field>
             <Field label="Start Date">
-              <input className="input" style={{ fontSize: '0.82rem' }} type="date" />
+              <input className="input" style={{ fontSize: '0.82rem' }} type="date" value={form.startDate} onChange={e => update('startDate', e.target.value)} />
             </Field>
             <Field label="Application Deadline">
-              <input className="input" style={{ fontSize: '0.82rem' }} type="date" />
+              <input className="input" style={{ fontSize: '0.82rem' }} type="date" value={form.deadline} onChange={e => update('deadline', e.target.value)} />
             </Field>
           </div>
 
@@ -235,15 +309,21 @@ export default function PostJob() {
             <button
               className="btn-primary"
               style={{ fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}
-              onClick={() => setSubmitted(true)}
+              onClick={submitVacancy}
+              disabled={saving}
             >
               <Briefcase size={14} />
-              {visibility === 'public' ? 'Post & Publish Job' : 'Save as Private'}
+              {saving ? 'Saving...' : visibility === 'public' ? 'Post & Publish Job' : 'Save as Private'}
             </button>
+            {saveError && (
+              <div style={{ padding: '0.65rem 0.75rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', color: '#b91c1c', fontSize: '0.82rem' }}>
+                {saveError}
+              </div>
+            )}
             <button
               className="btn-secondary"
               style={{ fontSize: '0.82rem', width: '100%', justifyContent: 'center' }}
-              onClick={() => navigate('/vacancies')}
+              onClick={() => navigate('/admin/vacancies')}
             >
               Cancel
             </button>

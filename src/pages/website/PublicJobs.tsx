@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MapPin, Clock, Briefcase, Search, Filter, ChevronRight, Building2 } from 'lucide-react'
-import { vacancies } from '../../data/mock'
-
-const publicVacancies = vacancies.filter(v => v.visibility !== 'Private' && v.status !== 'closed')
-
-const disciplines = ['All', ...Array.from(new Set(vacancies.map(v => v.discipline))).filter(Boolean)]
-const types = ['All', ...Array.from(new Set(vacancies.map(v => v.type))).filter(Boolean)]
+import { DataState } from '../../components/DataState'
+import { useCrmData } from '../../context/useCrmData'
 
 export default function PublicJobs() {
+  const { vacancies, loading, error } = useCrmData()
   const [search, setSearch] = useState('')
   const [discipline, setDiscipline] = useState('All')
   const [type, setType] = useState('All')
+  const publicVacancies = vacancies.filter(v => v.published && v.visibility !== 'Private' && v.status !== 'closed')
+  const disciplines = ['All', ...Array.from(new Set(publicVacancies.map(v => v.discipline))).filter(Boolean)]
+  const types = ['All', ...Array.from(new Set(publicVacancies.map(v => v.type))).filter(Boolean)]
 
   const filtered = publicVacancies.filter(v => {
     const q = search.toLowerCase()
@@ -21,6 +21,8 @@ export default function PublicJobs() {
       (type === 'All' || v.type === type)
     )
   })
+
+  if (loading || error) return <DataState loading={loading} error={error} />
 
   return (
     <div style={{ width: '100%', background: '#f5f6fa', fontFamily: 'Inter, sans-serif' }}>
@@ -74,7 +76,7 @@ export default function PublicJobs() {
             <div style={{ marginTop: '1rem', background: 'linear-gradient(135deg,#1e2535,#252f46)', borderRadius: '10px', padding: '1.25rem', border: '1px solid #b8942e30' }}>
               <div style={{ fontWeight: 700, color: '#fff', marginBottom: '0.5rem', fontSize: '1rem' }}>Don't see your role?</div>
               <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 0.875rem' }}>Register your CV and we'll match you when the right vacancy comes in.</p>
-              <Link to="/home/apply" style={{ display: 'block', background: '#b8942e', color: '#fff', borderRadius: '6px', padding: '0.5rem 1rem', textDecoration: 'none', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem' }}>Register CV</Link>
+              <Link to="/apply" style={{ display: 'block', background: '#b8942e', color: '#fff', borderRadius: '6px', padding: '0.5rem 1rem', textDecoration: 'none', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem' }}>Register CV</Link>
             </div>
           </aside>
 
@@ -90,7 +92,7 @@ export default function PublicJobs() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
               {filtered.map(v => (
-                <Link key={v.id} to={`/home/jobs/${v.id}`} style={{ textDecoration: 'none' }}>
+                <Link key={v.id} to={`/jobs/${v.id}`} style={{ textDecoration: 'none' }}>
                   <div style={{ background: '#fff', borderRadius: '10px', padding: '1.25rem', border: '1px solid #e5e7eb', transition: 'box-shadow 0.15s, border-color 0.15s', cursor: 'pointer' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#b8942e'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(184,148,46,0.1)' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none' }}

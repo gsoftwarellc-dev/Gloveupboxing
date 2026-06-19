@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Edit, Plus, MapPin, Calendar, Building2, Users,
-  Phone, Mail, Star, X, Search, AlertCircle, CheckCircle2, ArrowRight
+  Phone, Mail, Star, X, Search, AlertCircle, CheckCircle2, ArrowRight, Trash2
 } from 'lucide-react'
-import { candidates as allCandidates, projects as mockProjects } from '../data/mock'
+import { DataState } from '../components/DataState'
+import { useCrmData } from '../context/useCrmData'
 import { findRelatedClients } from '../utils/clientMatching'
-import { useProjectAssignedIds, assignCandidateToProject, unassignCandidateFromProject } from '../utils/projectAssignments'
+import type { Project } from '../types/crm'
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
@@ -40,20 +41,111 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default function ProjectDetail() {
   const { id } = useParams()
-  const project = mockProjects.find(p => p.id === Number(id)) ?? mockProjects[0]
-
-  const roles    = project.tags ?? []
-  const contacts = project.contacts ?? []
-  const status = statusConfig[project.status] ?? { label: project.status, cls: 'badge-gray' }
-  const relatedClients = findRelatedClients(project)
-
-  const assignedIds = useProjectAssignedIds(project.id)
+  const navigate = useNavigate()
+  const {
+    projects,
+    clients,
+    candidates: allCandidates,
+    projectAssignments,
+    loading,
+    error,
+    assignCandidateToProject,
+    unassignCandidateFromProject,
+    saveProject,
+    deleteProject,
+  } = useCrmData()
+  const project = projects.find(p => p.id === Number(id))
   const [showModal, setShowModal] = useState(false)
+
+  // ── Edit modal state ───────────────────────────────────────────────────────
+  const [showEdit, setShowEdit] = useState(false)
+  const [editForm, setEditForm] = useState<Partial<Project>>({})
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  function openEdit() {
+    if (!project) return
+    setEditForm({
+      name: project.name,
+      client: project.client,
+      mainContractor: project.mainContractor ?? '',
+      location: project.location,
+      postcode: project.postcode,
+      status: project.status,
+      stage: project.stage,
+      sector: project.sector ?? '',
+      priority: project.priority ?? '',
+      startDate: project.startDate,
+      endDate: project.endDate ?? '',
+      value: project.value ?? '',
+      rolesNeeded: project.rolesNeeded,
+      opportunityScore: project.opportunityScore,
+      notes: project.notes ?? '',
+    })
+    setEditError(null)
+    setShowDeleteConfirm(false)
+    setShowEdit(true)
+  }
+
+  function editField(field: keyof Project, value: unknown) {
+    setEditForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  async function saveEdit() {
+    if (!project) return
+    if (!editForm.name?.toString().trim()) { setEditError('Project name is required.'); return }
+    setEditSaving(true)
+    setEditError(null)
+    try {
+      await saveProject(project.id, editForm)
+      setShowEdit(false)
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Failed to save.')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  async function confirmDelete() {
+    if (!project) return
+    setDeleting(true)
+    try {
+      await deleteProject(project.id)
+      navigate('/admin/projects')
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Failed to delete.')
+      setDeleting(false)
+    }
+  }
   const [selectedRole, setSelectedRole] = useState('')
   const [selectedStartDate, setSelectedStartDate] = useState('2025-07-01')
   const [modalSearch, setModalSearch] = useState('')
   const [modalLocation, setModalLocation] = useState('')
   const [modalDiscipline, setModalDiscipline] = useState('')
+
+  if (loading || error) return <DataState loading={loading} error={error} />
+
+  if (!project) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <button onClick={() => navigate(-1)} className="btn-ghost" style={{ fontSize: '0.85rem' }}>
+          <ArrowLeft size={14} /> Back
+        </button>
+        <div className="card" style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af' }}>
+          Project not found.
+        </div>
+      </div>
+    )
+  }
+
+  const roles    = project.tags ?? []
+  const contacts = project.contacts ?? []
+  const status = statusConfig[project.status] ?? { label: project.status, cls: 'badge-gray' }
+  const relatedClients = findRelatedClients(project, clients)
+
+  const assignedIds = projectAssignments[project.id] ?? []
 
   const assignedCandidates = allCandidates.filter(c => assignedIds.includes(c.id))
 
@@ -81,13 +173,16 @@ export default function ProjectDetail() {
     setShowModal(true)
   }
 
-  function assignCandidate(candidateId: number) {
-    assignCandidateToProject(project.id, candidateId)
+  async function assignCandidate(candidateId: number) {
+    await assignCandidateToProject(project!.id, candidateId, {
+      role: selectedRole || undefined,
+      startDate: selectedStartDate || undefined,
+    })
     setShowModal(false)
   }
 
-  function removeAssignment(candidateId: number) {
-    unassignCandidateFromProject(project.id, candidateId)
+  async function removeAssignment(candidateId: number) {
+    await unassignCandidateFromProject(project!.id, candidateId)
   }
 
   const fmt = (d: string) => {
@@ -141,10 +236,10 @@ export default function ProjectDetail() {
 
       {/* Nav */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <Link to="/projects" className="btn-ghost" style={{ fontSize: '0.85rem' }}>
-          <ArrowLeft size={14} /> Back to Projects
-        </Link>
-        <button className="btn-secondary" style={{ fontSize: '0.82rem' }}><Edit size={13} />Edit Project</button>
+        <button onClick={() => navigate(-1)} className="btn-ghost" style={{ fontSize: '0.85rem' }}>
+          <ArrowLeft size={14} /> Back
+        </button>
+        <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={openEdit}><Edit size={13} />Edit Project</button>
       </div>
 
       {/* Header card */}
@@ -384,6 +479,152 @@ export default function ProjectDetail() {
           </div>
         </div>
       </div>
+
+      {/* ── Edit Project Modal ── */}
+      {showEdit && (
+        <div className="modal-overlay" onClick={() => { if (!editSaving && !deleting) setShowEdit(false) }}>
+          <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#111' }}>Edit Project</h2>
+              <button className="btn-ghost" style={{ padding: '0.25rem' }} onClick={() => setShowEdit(false)} disabled={editSaving || deleting}>✕</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              {/* Name */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Project Name *</label>
+                <input className="input" value={editForm.name ?? ''} onChange={e => editField('name', e.target.value)} placeholder="Project name" />
+              </div>
+              {/* Client */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Client</label>
+                <input className="input" value={editForm.client ?? ''} onChange={e => editField('client', e.target.value)} placeholder="Client name" />
+              </div>
+              {/* Main Contractor */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Main Contractor</label>
+                <input className="input" value={editForm.mainContractor ?? ''} onChange={e => editField('mainContractor', e.target.value)} placeholder="Main contractor" />
+              </div>
+              {/* Location */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Location</label>
+                <input className="input" value={editForm.location ?? ''} onChange={e => editField('location', e.target.value)} placeholder="e.g. London" />
+              </div>
+              {/* Postcode */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Postcode</label>
+                <input className="input" value={editForm.postcode ?? ''} onChange={e => editField('postcode', e.target.value)} placeholder="e.g. AL4 0XB" />
+              </div>
+              {/* Status */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Status</label>
+                <select className="input" value={editForm.status ?? ''} onChange={e => editField('status', e.target.value)}>
+                  <option value="active">Active</option>
+                  <option value="tender">Tender</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+              {/* Stage */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Stage</label>
+                <input className="input" value={editForm.stage ?? ''} onChange={e => editField('stage', e.target.value)} placeholder="e.g. Planning" />
+              </div>
+              {/* Sector */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Sector</label>
+                <input className="input" value={editForm.sector ?? ''} onChange={e => editField('sector', e.target.value)} placeholder="e.g. Construction" />
+              </div>
+              {/* Priority */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Priority</label>
+                <select className="input" value={editForm.priority ?? ''} onChange={e => editField('priority', e.target.value)}>
+                  <option value="">— None —</option>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+              </div>
+              {/* Value */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Project Value</label>
+                <input className="input" value={editForm.value ?? ''} onChange={e => editField('value', e.target.value)} placeholder="e.g. £2.5m" />
+              </div>
+              {/* Roles Needed */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Roles Needed</label>
+                <input className="input" type="number" min={0} value={editForm.rolesNeeded ?? 0} onChange={e => editField('rolesNeeded', Number(e.target.value))} />
+              </div>
+              {/* Opportunity Score */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Opportunity Score (0–100)</label>
+                <input className="input" type="number" min={0} max={100} value={editForm.opportunityScore ?? 0} onChange={e => editField('opportunityScore', Number(e.target.value))} />
+              </div>
+              {/* Start Date */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Start Date</label>
+                <input className="input" type="date" value={editForm.startDate ?? ''} onChange={e => editField('startDate', e.target.value)} />
+              </div>
+              {/* End Date */}
+              <div>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>End Date</label>
+                <input className="input" type="date" value={editForm.endDate ?? ''} onChange={e => editField('endDate', e.target.value)} />
+              </div>
+              {/* Notes */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="label" style={{ display: 'block', marginBottom: '0.3rem' }}>Notes / Opportunity Description</label>
+                <textarea
+                  className="input"
+                  rows={3}
+                  style={{ resize: 'vertical' }}
+                  value={editForm.notes ?? ''}
+                  onChange={e => editField('notes', e.target.value)}
+                  placeholder="Describe why this opportunity matters..."
+                />
+              </div>
+            </div>
+
+            {editError && (
+              <div style={{ marginTop: '0.875rem', padding: '0.6rem 0.875rem', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '0.5rem', fontSize: '0.82rem', color: '#b91c1c' }}>
+                {editError}
+              </div>
+            )}
+
+            {/* Delete confirmation */}
+            {showDeleteConfirm ? (
+              <div style={{ marginTop: '1.25rem', padding: '1rem', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '0.5rem' }}>
+                <p style={{ margin: '0 0 0.875rem', fontSize: '0.85rem', fontWeight: 600, color: '#b91c1c' }}>
+                  Delete "{project.name}"? This cannot be undone.
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn-primary" style={{ fontSize: '0.82rem', background: '#dc2626', borderColor: '#dc2626' }} onClick={confirmDelete} disabled={deleting}>
+                    {deleting ? 'Deleting…' : 'Yes, Delete'}
+                  </button>
+                  <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.25rem' }}>
+                <button
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: '0.4rem 0.6rem', borderRadius: '0.4rem' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={editSaving}
+                >
+                  <Trash2 size={13} /> Delete Project
+                </button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => setShowEdit(false)} disabled={editSaving}>Cancel</button>
+                  <button className="btn-primary" style={{ fontSize: '0.82rem' }} onClick={saveEdit} disabled={editSaving}>
+                    {editSaving ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Assign Candidate Modal ── */}
       {showModal && (

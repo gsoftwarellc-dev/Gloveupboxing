@@ -1,10 +1,9 @@
-import { clientCompanies, type ClientCompany } from '../data/clients'
-import { projects, type Project } from '../data/mock'
+import type { ClientCompany, Project } from '../types/crm'
 
 const PLACEHOLDER_RE = /(not yet appointed|multiple|preferred bidder|bidders?:|^tba\b)/i
 const SUFFIX_RE = /\b(limited|ltd\.?|llp|plc|group)\b/gi
 
-function normalizeCompanyName(name: string): string {
+export function normalizeCompanyName(name: string): string {
   return name
     .toLowerCase()
     .replace(/\([^)]*\)/g, '')
@@ -13,16 +12,16 @@ function normalizeCompanyName(name: string): string {
     .trim()
 }
 
-const clientsByNormalizedName = new Map<string, ClientCompany>()
-for (const client of clientCompanies) {
-  const key = normalizeCompanyName(client.name)
-  if (key && !clientsByNormalizedName.has(key)) {
-    clientsByNormalizedName.set(key, client)
-  }
-}
-
 /** Find a client company that matches a project's main contractor or org-type contacts. */
-export function findRelatedClients(project: Project): ClientCompany[] {
+export function findRelatedClients(project: Project, clients: ClientCompany[]): ClientCompany[] {
+  const clientsByNormalizedName = new Map<string, ClientCompany>()
+  for (const client of clients) {
+    const key = normalizeCompanyName(client.name)
+    if (key && !clientsByNormalizedName.has(key)) {
+      clientsByNormalizedName.set(key, client)
+    }
+  }
+
   const matches = new Map<number, ClientCompany>()
 
   if (project.mainContractor && !PLACEHOLDER_RE.test(project.mainContractor)) {
@@ -41,26 +40,26 @@ export function findRelatedClients(project: Project): ClientCompany[] {
   return Array.from(matches.values())
 }
 
-const projectsByNormalizedClientName = new Map<string, Project[]>()
-for (const project of projects) {
-  const candidates: string[] = []
-  if (project.mainContractor && !PLACEHOLDER_RE.test(project.mainContractor)) {
-    candidates.push(project.mainContractor)
-  }
-  for (const contact of project.contacts) {
-    if (contact.type === 'org') candidates.push(contact.name)
-  }
-  for (const name of candidates) {
-    const key = normalizeCompanyName(name)
-    if (!key) continue
-    const list = projectsByNormalizedClientName.get(key) ?? []
-    if (!list.find(p => p.id === project.id)) list.push(project)
-    projectsByNormalizedClientName.set(key, list)
-  }
-}
-
 /** Find projects where this client company is the main contractor or an org-type contact. */
-export function findRelatedProjects(client: ClientCompany): Project[] {
+export function findRelatedProjects(client: ClientCompany, projects: Project[]): Project[] {
+  const projectsByNormalizedClientName = new Map<string, Project[]>()
+  for (const project of projects) {
+    const candidates: string[] = []
+    if (project.mainContractor && !PLACEHOLDER_RE.test(project.mainContractor)) {
+      candidates.push(project.mainContractor)
+    }
+    for (const contact of project.contacts) {
+      if (contact.type === 'org') candidates.push(contact.name)
+    }
+    for (const name of candidates) {
+      const key = normalizeCompanyName(name)
+      if (!key) continue
+      const list = projectsByNormalizedClientName.get(key) ?? []
+      if (!list.find(p => p.id === project.id)) list.push(project)
+      projectsByNormalizedClientName.set(key, list)
+    }
+  }
+
   const key = normalizeCompanyName(client.name)
   return projectsByNormalizedClientName.get(key) ?? []
 }

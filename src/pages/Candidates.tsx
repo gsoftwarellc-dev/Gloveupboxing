@@ -1,11 +1,17 @@
-import { useState } from 'react'
+import { useDeferredValue, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Plus, Search, Download, MapPin, Phone, Mail, Star, SlidersHorizontal, CheckCircle, Briefcase, Building2, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react'
-import { candidates as initialCandidates, clients, vacancies } from '../data/mock'
+import { DataState } from '../components/DataState'
+import { useCrmData } from '../context/useCrmData'
+import { defaultDisciplines } from '../lib/constants'
+import { fetchCandidatesPaged } from '../lib/api'
+import { useServerPage } from '../hooks/useServerPage'
+import type { Candidate } from '../types/crm'
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 25
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
+  new:             { label: 'New',           cls: 'badge-blue' },
   available:       { label: 'Available',     cls: 'badge-green' },
   placed:          { label: 'Placed',        cls: 'badge-blue' },
   interviewing:    { label: 'Interviewing',  cls: 'badge-yellow' },
@@ -14,35 +20,35 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
   qualified:       { label: 'Ready to Work', cls: 'badge-gold' },
 }
 
-const disciplines = ['All', ...Array.from(new Set(initialCandidates.map(c => c.discipline))).filter(Boolean)]
-
 const poolTabs = [
   { key: 'all',       label: 'All Candidates' },
   { key: 'qualified', label: 'Ready to Work' },
   { key: 'placed',    label: 'Work Assigned Already' },
 ]
 
-type Assignment = { candidateId: number; clientId: number; vacancyId: number; startDate: string }
-
 export default function Candidates() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [candidates, setCandidates] = useState(initialCandidates.map(c => ({ ...c })))
-  const [assignments, setAssignments] = useState<Assignment[]>([
-    { candidateId: 2, clientId: 1, vacancyId: 1, startDate: '2025-06-16' },
-    { candidateId: 3, clientId: 2, vacancyId: 3, startDate: '2025-06-01' },
-  ])
-  const [search, setSearch] = useState(searchParams.get('search') ?? '')
+  const {
+    clients,
+    vacancies,
+    candidateAssignments,
+    loading: ctxLoading,
+    error: ctxError,
+    addCandidate,
+    assignCandidateToCompany,
+    removeCandidateAssignment,
+  } = useCrmData()
+
+  const [searchRaw, setSearchRaw] = useState(searchParams.get('search') ?? '')
+  const search = useDeferredValue(searchRaw)
   const [discipline, setDiscipline] = useState('All')
   const [status, setStatus] = useState('All')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
   const [showAddModal, setShowAddModal] = useState(false)
   const [assignModal, setAssignModal] = useState<number | null>(null)
-  const [assignClientId, setAssignClientId] = useState(clients[0]?.id ?? 0)
-  const [assignVacancyId, setAssignVacancyId] = useState(vacancies[0]?.id ?? 0)
+  const [assignClientId, setAssignClientId] = useState(0)
+  const [assignVacancyId, setAssignVacancyId] = useState(0)
   const [assignStartDate, setAssignStartDate] = useState('2025-07-01')
-  const [page, setPage] = useState(1)
 
   const poolTab = searchParams.get('pool') ?? 'all'
 
@@ -53,83 +59,105 @@ export default function Candidates() {
       else next.set('pool', key)
       return next
     })
-    setPage(1)
   }
 
+  // Build server-side filters
+  const serverFilters = {
+    search: search || undefined,
+    discipline: discipline !== 'All' ? discipline : undefined,
+    status: poolTab !== 'all'
+      ? poolTab
+      : status !== 'All' ? status : undefined,
+  } as Record<string, string | undefined>
 
-  function confirmAssign() {
-    if (!assignModal) return
-    setCandidates(prev => prev.map(c => c.id === assignModal ? { ...c, status: 'placed' } : c))
-    setAssignments(prev => [...prev, { candidateId: assignModal, clientId: assignClientId, vacancyId: assignVacancyId, startDate: assignStartDate }])
-    setAssignModal(null)
-  }
+  const { data: candidates, meta, page, setPage, loading: pageLoading, error: pageError, reload } = useServerPage<Candidate, typeof serverFilters>({
+    fetcher: fetchCandidatesPaged as Parameters<typeof useServerPage>[0]['fetcher'],
+    filters: serverFilters,
+    perPage: PAGE_SIZE,
+  })
 
-  function removeAssignment(candidateId: number) {
-    setCandidates(prev => prev.map(c => c.id === candidateId ? { ...c, status: 'qualified' } : c))
-    setAssignments(prev => prev.filter(a => a.candidateId !== candidateId))
-  }
+  const isLoading = ctxLoading || pageLoading
+  const pageError2 = ctxError || pageError
+
+  if (ctxLoading && !candidates.length) return <DataState loading={true} error={null} />
+  if (ctxError) return <DataState loading={false} error={ctxError} />
+
+  const totalPages = meta?.lastPage ?? 1
+  const total = meta?.total ?? candidates.length
+
+  // For status counts in tabs, use meta totals when available
+  // They will be approximate unless we make separate count calls — this is good enough
+  const qualifiedCount = poolTab === 'qualified' ? total : undefined
+  const placedCount = poolTab === 'placed' ? total : undefined
 
   function getAssignment(candidateId: number) {
-    return assignments.find(a => a.candidateId === candidateId)
+    return candidateAssignments.find(a => a.candidateId === candidateId)
   }
-
-  const qualifiedCount = candidates.filter(c => c.status === 'qualified').length
-  const placedCount = candidates.filter(c => c.status === 'placed').length
-
-  const filtered = candidates.filter(c => {
-    const q = search.toLowerCase()
-    const matchSearch = c.name.toLowerCase().includes(q) || c.role.toLowerCase().includes(q) || c.location.toLowerCase().includes(q)
-    const matchDiscipline = discipline === 'All' || c.discipline === discipline
-    const matchStatus = status === 'All' || c.status === status
-    const matchPool =
-      poolTab === 'qualified' ? c.status === 'qualified' :
-      poolTab === 'placed' ? c.status === 'placed' : true
-    const matchDateRange =
-      (!dateFrom || c.dateAdded >= dateFrom) &&
-      (!dateTo || c.dateAdded <= dateTo)
-    return matchSearch && matchDiscipline && matchStatus && matchPool && matchDateRange
-  })
 
   const assignCandidate = assignModal ? candidates.find(c => c.id === assignModal) : null
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const currentPage = Math.min(page, totalPages)
-  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  async function confirmAssign() {
+    if (!assignModal) return
+    const selectedVacancy = vacancies.find(v => v.id === assignVacancyId)
+    await assignCandidateToCompany({
+      candidateId: assignModal,
+      clientId: assignClientId || selectedVacancy?.clientId,
+      vacancyId: assignVacancyId || undefined,
+      projectId: selectedVacancy?.projectId,
+      startDate: assignStartDate,
+    })
+    setAssignModal(null)
+    reload()
+  }
 
-  function Pagination() {
+  async function removeAssignment(candidateId: number) {
+    const assignment = getAssignment(candidateId)
+    if (!assignment) return
+    await removeCandidateAssignment(assignment.id)
+    reload()
+  }
+
+  function renderPagination() {
     if (totalPages <= 1) return null
+    const from = (page - 1) * PAGE_SIZE + 1
+    const to = Math.min(page * PAGE_SIZE, total)
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <span style={{ fontSize: '0.82rem', color: '#6b7280' }}>
-          Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}
+          Showing {from}–{to} of {total}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
           <button
             className="btn-secondary"
             style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
-            disabled={currentPage === 1}
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-          >
-            <ChevronLeft size={12} />
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-            <button
-              key={n}
-              className={n === currentPage ? 'btn-primary' : 'btn-secondary'}
-              style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem', minWidth: '2.25rem' }}
-              onClick={() => setPage(n)}
-            >
-              {n}
-            </button>
-          ))}
+            disabled={page === 1}
+            onClick={() => setPage(Math.max(1, page - 1))}
+          ><ChevronLeft size={12} /></button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 2)
+            .reduce<(number | 'ellipsis')[]>((acc, n, i, arr) => {
+              if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push('ellipsis')
+              acc.push(n)
+              return acc
+            }, [])
+            .map((n, i) =>
+              n === 'ellipsis'
+                ? <span key={`e${i}`} style={{ fontSize: '0.82rem', color: '#9ca3af', padding: '0 0.25rem' }}>…</span>
+                : (
+                  <button
+                    key={n}
+                    className={n === page ? 'btn-primary' : 'btn-secondary'}
+                    style={{ fontSize: '0.82rem', padding: '0.4rem 0.75rem', minWidth: '2.25rem' }}
+                    onClick={() => setPage(n)}
+                  >{n}</button>
+                )
+            )}
           <button
             className="btn-secondary"
             style={{ fontSize: '0.82rem', padding: '0.4rem 0.7rem' }}
-            disabled={currentPage === totalPages}
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-          >
-            <ChevronRight size={12} />
-          </button>
+            disabled={page === totalPages}
+            onClick={() => setPage(Math.min(totalPages, page + 1))}
+          ><ChevronRight size={12} /></button>
         </div>
       </div>
     )
@@ -142,7 +170,7 @@ export default function Candidates() {
         <div>
           <h1 className="page-title">Candidates</h1>
           <p style={{ color: '#6b7280', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>
-            {candidates.length} total · {qualifiedCount} ready to work · {placedCount} assigned
+            {meta ? `${meta.total} total` : '…'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -166,10 +194,10 @@ export default function Candidates() {
             }}
           >
             {t.label}
-            {t.key === 'qualified' && qualifiedCount > 0 && (
+            {t.key === 'qualified' && qualifiedCount !== undefined && qualifiedCount > 0 && (
               <span style={{ background: poolTab === t.key ? '#b8942e' : '#e5e7eb', color: poolTab === t.key ? '#fff' : '#374151', borderRadius: '9999px', padding: '0 0.4rem', fontSize: '0.7rem', fontWeight: 700 }}>{qualifiedCount}</span>
             )}
-            {t.key === 'placed' && placedCount > 0 && (
+            {t.key === 'placed' && placedCount !== undefined && placedCount > 0 && (
               <span style={{ background: poolTab === t.key ? '#b8942e' : '#e5e7eb', color: poolTab === t.key ? '#fff' : '#374151', borderRadius: '9999px', padding: '0 0.4rem', fontSize: '0.7rem', fontWeight: 700 }}>{placedCount}</span>
             )}
           </button>
@@ -190,21 +218,26 @@ export default function Candidates() {
         </div>
       )}
 
+      {pageError2 && !isLoading && (
+        <div style={{ padding: '0.75rem 1rem', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: '0.5rem', fontSize: '0.85rem', color: '#dc2626' }}>
+          {pageError2}
+        </div>
+      )}
+
       {/* ── Ready to Work view ── */}
       {poolTab === 'qualified' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-          {filtered.length === 0 && (
+          {isLoading && <DataState loading={true} error={null} />}
+          {!isLoading && candidates.length === 0 && (
             <div className="card" style={{ padding: '2rem', textAlign: 'center', color: '#6b7280', fontSize: '0.85rem' }}>
               No qualified candidates yet. Mark candidates as qualified from the All Candidates tab.
             </div>
           )}
-          {paged.map(c => (
+          {candidates.map(c => (
             <div key={c.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.25rem' }}>
-              {/* Avatar */}
               <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b8942e', fontWeight: 700, fontSize: '0.75rem', flexShrink: 0 }}>
                 {c.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
               </div>
-              {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111' }}>{c.name}</span>
@@ -219,11 +252,9 @@ export default function Candidates() {
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', color: '#374151', fontWeight: 600 }}><Calendar size={11} />Available: {c.availability}</span>
                 </div>
               </div>
-              {/* Rating */}
               <div style={{ display: 'flex', gap: '1px', flexShrink: 0 }}>
                 {[1,2,3,4,5].map(s => <Star key={s} size={12} fill={s <= c.rating ? '#b8942e' : 'none'} color={s <= c.rating ? '#b8942e' : '#d1d5db'} />)}
               </div>
-              {/* Actions */}
               <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                 <Link to={`/candidates/${c.id}`} className="btn-secondary" style={{ fontSize: '0.78rem' }}>View Profile</Link>
                 <button
@@ -236,29 +267,28 @@ export default function Candidates() {
               </div>
             </div>
           ))}
-          <Pagination />
+          {renderPagination()}
         </div>
       )}
 
       {/* ── Work Assigned Already view ── */}
       {poolTab === 'placed' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-          {filtered.length === 0 && (
+          {isLoading && <DataState loading={true} error={null} />}
+          {!isLoading && candidates.length === 0 && (
             <div className="card" style={{ padding: '2rem', textAlign: 'center', color: '#6b7280', fontSize: '0.85rem' }}>
               No candidates assigned yet. Assign candidates from the Ready to Work tab.
             </div>
           )}
-          {paged.map(c => {
+          {candidates.map(c => {
             const a = getAssignment(c.id)
             const assignedClient = a ? clients.find(cl => cl.id === a.clientId) : null
             const assignedVacancy = a ? vacancies.find(v => v.id === a.vacancyId) : null
             return (
               <div key={c.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.25rem' }}>
-                {/* Avatar */}
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b8942e', fontWeight: 700, fontSize: '0.75rem', flexShrink: 0 }}>
                   {c.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                 </div>
-                {/* Candidate info */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#111' }}>{c.name}</span>
@@ -270,7 +300,6 @@ export default function Candidates() {
                     <MapPin size={11} />{c.location} · <Phone size={11} />{c.phone}
                   </div>
                 </div>
-                {/* Assignment details */}
                 {assignedClient && (
                   <div style={{ padding: '0.625rem 0.875rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.5rem', minWidth: 200, flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
@@ -281,7 +310,6 @@ export default function Candidates() {
                     {a && <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', color: '#6b7280', marginTop: '0.2rem' }}><Calendar size={10} />Started: {a.startDate}</div>}
                   </div>
                 )}
-                {/* Actions */}
                 <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                   <Link to={`/candidates/${c.id}`} className="btn-secondary" style={{ fontSize: '0.78rem' }}>View Profile</Link>
                   <button className="btn-ghost" style={{ padding: '0.35rem 0.6rem', fontSize: '0.78rem', color: '#ef4444' }} onClick={() => removeAssignment(c.id)}>
@@ -291,7 +319,7 @@ export default function Candidates() {
               </div>
             )
           })}
-          <Pagination />
+          {renderPagination()}
         </div>
       )}
 
@@ -303,40 +331,16 @@ export default function Candidates() {
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <div className="search-bar" style={{ flex: 1, minWidth: 200 }}>
                 <Search size={14} />
-                <input className="input" placeholder="Search name, role, location..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
+                <input className="input" placeholder="Search name, role, location..." value={searchRaw} onChange={e => setSearchRaw(e.target.value)} />
               </div>
-              <select className="input" style={{ width: 'auto', fontSize: '0.82rem' }} value={discipline} onChange={e => { setDiscipline(e.target.value); setPage(1) }}>
-                {disciplines.map(d => <option key={d}>{d}</option>)}
+              <select className="input" style={{ width: 'auto', fontSize: '0.82rem' }} value={discipline} onChange={e => setDiscipline(e.target.value)}>
+                <option value="All">All Disciplines</option>
+                {defaultDisciplines.map(d => <option key={d}>{d}</option>)}
               </select>
-              <select className="input" style={{ width: 'auto', fontSize: '0.82rem' }} value={status} onChange={e => { setStatus(e.target.value); setPage(1) }}>
+              <select className="input" style={{ width: 'auto', fontSize: '0.82rem' }} value={status} onChange={e => setStatus(e.target.value)}>
                 <option value="All">All Status</option>
                 {Object.entries(statusConfig).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
               </select>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.2rem', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>From</label>
-                <input
-                  type="date"
-                  className="input"
-                  style={{ fontSize: '0.82rem' }}
-                  value={dateFrom}
-                  onChange={e => { setDateFrom(e.target.value); setPage(1) }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.2rem', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>To</label>
-                <input
-                  type="date"
-                  className="input"
-                  style={{ fontSize: '0.82rem' }}
-                  value={dateTo}
-                  onChange={e => { setDateTo(e.target.value); setPage(1) }}
-                />
-              </div>
-              {(dateFrom || dateTo) && (
-                <button className="btn-secondary" style={{ fontSize: '0.82rem', alignSelf: 'flex-end' }} onClick={() => { setDateFrom(''); setDateTo(''); setPage(1) }}>
-                  Clear
-                </button>
-              )}
               <button className="btn-secondary" style={{ fontSize: '0.82rem' }}><SlidersHorizontal size={14} />More Filters</button>
               <div style={{ display: 'flex', gap: '2px', marginLeft: 'auto', background: '#f3f4f6', borderRadius: '0.5rem', padding: '2px' }}>
                 <button onClick={() => setViewMode('table')} style={{ padding: '0.35rem 0.6rem', border: 'none', cursor: 'pointer', borderRadius: '0.375rem', background: viewMode === 'table' ? '#1a1a2e' : 'transparent', color: viewMode === 'table' ? '#fff' : '#6b7280' }}>
@@ -349,7 +353,9 @@ export default function Candidates() {
             </div>
           </div>
 
-          {viewMode === 'table' ? (
+          {isLoading && <DataState loading={true} error={null} />}
+
+          {!isLoading && viewMode === 'table' ? (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <div style={{ overflowX: 'auto' }}>
                 <table className="data-table">
@@ -360,7 +366,10 @@ export default function Candidates() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paged.map(c => (
+                    {candidates.length === 0 && (
+                      <tr><td colSpan={9} style={{ textAlign: 'center', color: '#9ca3af', padding: '2rem', fontSize: '0.85rem' }}>No candidates found.</td></tr>
+                    )}
+                    {candidates.map(c => (
                       <tr key={c.id}>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
@@ -378,7 +387,7 @@ export default function Candidates() {
                           <span className="badge badge-gold" style={{ fontSize: '0.7rem', marginTop: '0.2rem' }}>{c.discipline}</span>
                         </td>
                         <td><div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.82rem', color: '#6b7280' }}><MapPin size={12} />{c.location}</div></td>
-                        <td style={{ fontSize: '0.82rem', color: '#374151' }}>£{(c.salary / 1000).toFixed(0)}k</td>
+                        <td style={{ fontSize: '0.82rem', color: '#374151' }}>£{((c.salary ?? 0) / 1000).toFixed(0)}k</td>
                         <td><span className={`badge ${statusConfig[c.status]?.cls || 'badge-gray'}`} style={{ fontSize: '0.7rem' }}>{statusConfig[c.status]?.label || c.status}</span></td>
                         <td>
                           <div style={{ display: 'flex', gap: '1px' }}>
@@ -388,9 +397,7 @@ export default function Candidates() {
                         <td style={{ fontSize: '0.82rem', color: '#6b7280' }}>{c.recruiter}</td>
                         <td style={{ fontSize: '0.82rem', color: '#6b7280' }}>{c.lastContacted}</td>
                         <td>
-                          <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                            <Link to={`/candidates/${c.id}`} className="btn-ghost" style={{ padding: '0.3rem 0.6rem', fontSize: '0.82rem' }}>View</Link>
-                          </div>
+                          <Link to={`/candidates/${c.id}`} className="btn-ghost" style={{ padding: '0.3rem 0.6rem', fontSize: '0.82rem' }}>View</Link>
                         </td>
                       </tr>
                     ))}
@@ -398,49 +405,50 @@ export default function Candidates() {
                 </table>
               </div>
               <div style={{ padding: '0.875rem 1rem', borderTop: '1px solid #f1f5f9' }}>
-                <Pagination />
+                {renderPagination()}
               </div>
             </div>
-          ) : (
+          ) : !isLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-              {paged.map(c => (
-                <div key={c.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b8942e', fontWeight: 700, fontSize: '0.75rem', flexShrink: 0 }}>
-                        {c.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                {candidates.length === 0 && (
+                  <div className="card" style={{ padding: '2rem', textAlign: 'center', color: '#6b7280', fontSize: '0.85rem', gridColumn: '1/-1' }}>No candidates found.</div>
+                )}
+                {candidates.map(c => (
+                  <div key={c.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b8942e', fontWeight: 700, fontSize: '0.75rem', flexShrink: 0 }}>
+                          {c.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#111', fontSize: '0.9rem' }}>{c.name}</div>
+                          <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.1rem' }}>{c.role}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 600, color: '#111', fontSize: '0.9rem' }}>{c.name}</div>
-                        <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '0.1rem' }}>{c.role}</div>
+                      <span className={`badge ${statusConfig[c.status]?.cls || 'badge-gray'}`} style={{ fontSize: '0.7rem' }}>{statusConfig[c.status]?.label || c.status}</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#6b7280' }}><MapPin size={12} />{c.location} · {c.postcode}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#6b7280' }}><Mail size={12} />{c.email}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#6b7280' }}><Phone size={12} />{c.phone}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                      <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>{c.discipline}</span>
+                      {c.tags.slice(0, 2).map((t: string) => <span key={t} className="badge badge-gray" style={{ fontSize: '0.7rem' }}>{t}</span>)}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
+                      <div style={{ display: 'flex', gap: '1px' }}>
+                        {[1,2,3,4,5].map(s => <Star key={s} size={13} fill={s <= c.rating ? '#b8942e' : 'none'} color={s <= c.rating ? '#b8942e' : '#d1d5db'} />)}
                       </div>
-                    </div>
-                    <span className={`badge ${statusConfig[c.status]?.cls || 'badge-gray'}`} style={{ fontSize: '0.7rem' }}>{statusConfig[c.status]?.label || c.status}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#6b7280' }}><MapPin size={12} />{c.location} · {c.postcode}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#6b7280' }}><Mail size={12} />{c.email}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#6b7280' }}><Phone size={12} />{c.phone}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-                    <span className="badge badge-gold" style={{ fontSize: '0.7rem' }}>{c.discipline}</span>
-                    {c.tags.slice(0, 2).map((t: string) => <span key={t} className="badge badge-gray" style={{ fontSize: '0.7rem' }}>{t}</span>)}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '0.75rem' }}>
-                    <div style={{ display: 'flex', gap: '1px' }}>
-                      {[1,2,3,4,5].map(s => <Star key={s} size={13} fill={s <= c.rating ? '#b8942e' : 'none'} color={s <= c.rating ? '#b8942e' : '#d1d5db'} />)}
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.375rem' }}>
                       <Link to={`/candidates/${c.id}`} className="btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}>View</Link>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              {renderPagination()}
             </div>
-            <Pagination />
-            </div>
-          )}
+          ) : null}
         </>
       )}
 
@@ -452,8 +460,6 @@ export default function Candidates() {
               <h2 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#111' }}>Assign to Company</h2>
               <button className="btn-ghost" style={{ padding: '0.25rem' }} onClick={() => setAssignModal(null)}>✕</button>
             </div>
-
-            {/* Candidate summary */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.5rem', marginBottom: '1.25rem' }}>
               <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b8942e', fontWeight: 700, fontSize: '0.7rem', flexShrink: 0 }}>
                 {assignCandidate.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
@@ -464,7 +470,6 @@ export default function Candidates() {
               </div>
               <span className="badge badge-gold" style={{ fontSize: '0.7rem', marginLeft: 'auto' }}>{assignCandidate.discipline}</span>
             </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
               <div>
                 <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Select Company *</label>
@@ -483,7 +488,6 @@ export default function Candidates() {
                 <input className="input" style={{ fontSize: '0.82rem' }} type="date" value={assignStartDate} onChange={e => setAssignStartDate(e.target.value)} />
               </div>
             </div>
-
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
               <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => setAssignModal(null)}>Cancel</button>
               <button className="btn-primary" style={{ fontSize: '0.82rem' }} onClick={confirmAssign}>
@@ -494,12 +498,86 @@ export default function Candidates() {
         </div>
       )}
 
-      {showAddModal && <AddCandidateModal onClose={() => setShowAddModal(false)} />}
+      {showAddModal && (
+        <AddCandidateModal
+          onClose={() => setShowAddModal(false)}
+          onAdd={async (payload) => { const c = await addCandidate(payload); reload(); return c }}
+          disciplines={defaultDisciplines}
+        />
+      )}
     </div>
   )
 }
 
-function AddCandidateModal({ onClose }: { onClose: () => void }) {
+function AddCandidateModal({
+  onClose,
+  onAdd,
+  disciplines,
+}: {
+  onClose: () => void
+  onAdd: (candidate: Partial<Candidate> & { name: string }) => Promise<Candidate>
+  disciplines: string[]
+}) {
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    role: '',
+    discipline: disciplines[0] ?? 'Civil',
+    location: '',
+    postcode: '',
+    salary: '',
+    source: 'LinkedIn',
+    rightToWork: 'Yes',
+    notes: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function update(field: keyof typeof form, value: string) {
+    setForm(prev => ({ ...prev, [field]: value }))
+    setError('')
+  }
+
+  async function save() {
+    const name = `${form.firstName} ${form.lastName}`.trim()
+    if (!name) {
+      setError('Candidate name is required.')
+      return
+    }
+    setSaving(true)
+    try {
+      await onAdd({
+        name,
+        email: form.email,
+        phone: form.phone,
+        role: form.role,
+        discipline: form.discipline,
+        location: form.location,
+        postcode: form.postcode,
+        salary: Number(form.salary.replace(/[^\d.]/g, '') || 0),
+        source: form.source,
+        rightToWork: form.rightToWork === 'Yes',
+        notes: form.notes,
+        status: 'new',
+        dateAdded: new Date().toISOString().slice(0, 10),
+        rating: 0,
+        experienceYears: 0,
+        tags: [],
+        certificates: [],
+        skills: [],
+        employmentHistory: [],
+        references: [],
+      })
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to save candidate.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
@@ -511,49 +589,54 @@ function AddCandidateModal({ onClose }: { onClose: () => void }) {
           {[{ label: 'First Name', ph: 'John' }, { label: 'Last Name', ph: 'Smith' }, { label: 'Email', ph: 'john.smith@email.com' }, { label: 'Phone', ph: '07700 000000' }].map(f => (
             <div key={f.label}>
               <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>{f.label}</label>
-              <input className="input" style={{ fontSize: '0.82rem' }} placeholder={f.ph} />
+              <input className="input" style={{ fontSize: '0.82rem' }} placeholder={f.ph} value={form[f.label === 'First Name' ? 'firstName' : f.label === 'Last Name' ? 'lastName' : f.label === 'Email' ? 'email' : 'phone']} onChange={e => update(f.label === 'First Name' ? 'firstName' : f.label === 'Last Name' ? 'lastName' : f.label === 'Email' ? 'email' : 'phone', e.target.value)} />
             </div>
           ))}
           <div style={{ gridColumn: '1/-1' }}>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Job Role / Title</label>
-            <input className="input" style={{ fontSize: '0.82rem' }} placeholder="e.g. Senior Site Manager" />
+            <input className="input" style={{ fontSize: '0.82rem' }} placeholder="e.g. Senior Site Manager" value={form.role} onChange={e => update('role', e.target.value)} />
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Discipline</label>
-            <select className="input" style={{ fontSize: '0.82rem' }}>
-              <option>Civil</option><option>Structural</option><option>Groundworks</option><option>MEP</option><option>Commercial</option><option>H&S</option>
+            <select className="input" style={{ fontSize: '0.82rem' }} value={form.discipline} onChange={e => update('discipline', e.target.value)}>
+              {disciplines.map(d => <option key={d}>{d}</option>)}
             </select>
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Location</label>
-            <input className="input" style={{ fontSize: '0.82rem' }} placeholder="City" />
+            <input className="input" style={{ fontSize: '0.82rem' }} placeholder="City" value={form.location} onChange={e => update('location', e.target.value)} />
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Postcode</label>
-            <input className="input" style={{ fontSize: '0.82rem' }} placeholder="SW1A 1AA" />
+            <input className="input" style={{ fontSize: '0.82rem' }} placeholder="SW1A 1AA" value={form.postcode} onChange={e => update('postcode', e.target.value)} />
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Salary Expectation</label>
-            <input className="input" style={{ fontSize: '0.82rem' }} placeholder="£50,000" />
+            <input className="input" style={{ fontSize: '0.82rem' }} placeholder="£50,000" value={form.salary} onChange={e => update('salary', e.target.value)} />
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Source</label>
-            <select className="input" style={{ fontSize: '0.82rem' }}>
+            <select className="input" style={{ fontSize: '0.82rem' }} value={form.source} onChange={e => update('source', e.target.value)}>
               <option>LinkedIn</option><option>Job Board</option><option>Referral</option><option>Website</option><option>Cold Call</option>
             </select>
           </div>
           <div>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Right to Work</label>
-            <select className="input" style={{ fontSize: '0.82rem' }}><option>Yes</option><option>No</option><option>Requires Sponsorship</option></select>
+            <select className="input" style={{ fontSize: '0.82rem' }} value={form.rightToWork} onChange={e => update('rightToWork', e.target.value)}><option>Yes</option><option>No</option><option>Requires Sponsorship</option></select>
           </div>
           <div style={{ gridColumn: '1/-1' }}>
             <label className="label" style={{ display: 'block', marginBottom: '0.35rem' }}>Notes</label>
-            <textarea className="input" style={{ fontSize: '0.82rem', resize: 'vertical' } as React.CSSProperties} rows={3} placeholder="Initial notes about the candidate..." />
+            <textarea className="input" style={{ fontSize: '0.82rem', resize: 'vertical' } as React.CSSProperties} rows={3} placeholder="Initial notes about the candidate..." value={form.notes} onChange={e => update('notes', e.target.value)} />
           </div>
         </div>
+        {error && (
+          <div style={{ marginTop: '0.875rem', padding: '0.6rem 0.875rem', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: '0.5rem', fontSize: '0.85rem', color: '#dc2626' }}>
+            {error}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
           <button className="btn-secondary" style={{ fontSize: '0.82rem' }} onClick={onClose}>Cancel</button>
-          <button className="btn-primary" style={{ fontSize: '0.82rem' }} onClick={onClose}>Add Candidate</button>
+          <button className="btn-primary" style={{ fontSize: '0.82rem' }} onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Add Candidate'}</button>
         </div>
       </div>
     </div>

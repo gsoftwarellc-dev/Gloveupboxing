@@ -1,10 +1,11 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Mail, Phone, MapPin, Calendar, FileText,
   Briefcase, Edit, Plus, Download, CheckCircle, MessageSquare,
   Clock, Award, Building2, Star, User
 } from 'lucide-react'
-import { candidates } from '../data/mock'
+import { DataState } from '../components/DataState'
+import { useCrmData } from '../context/useCrmData'
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   available:       { label: 'Available',      cls: 'badge-green' },
@@ -43,12 +44,16 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 export default function CandidateDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const { candidates, loading, error } = useCrmData()
   const c = candidates.find(c => c.id === Number(id))
+
+  if (loading || error) return <DataState loading={loading} error={error} />
 
   if (!c) return (
     <div style={{ textAlign: 'center', padding: '4rem' }}>
       <p style={{ color: '#6b7280' }}>Candidate not found.</p>
-      <Link to="/candidates" className="btn-primary" style={{ marginTop: '1rem', display: 'inline-flex' }}>Back to Candidates</Link>
+      <button onClick={() => navigate(-1)} className="btn-primary" style={{ marginTop: '1rem', display: 'inline-flex' }}>Back</button>
     </div>
   )
 
@@ -59,9 +64,9 @@ export default function CandidateDetail() {
 
       {/* Nav bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <Link to="/candidates" className="btn-ghost" style={{ fontSize: '0.85rem' }}>
-          <ArrowLeft size={14} /> Back to Candidates
-        </Link>
+        <button onClick={() => navigate(-1)} className="btn-ghost" style={{ fontSize: '0.85rem' }}>
+          <ArrowLeft size={14} /> Back
+        </button>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button className="btn-secondary" style={{ fontSize: '0.82rem' }}><Download size={13} />Export CV</button>
           <button className="btn-secondary" style={{ fontSize: '0.82rem' }}><Edit size={13} />Edit</button>
@@ -290,7 +295,7 @@ export default function CandidateDetail() {
               <button className="btn-ghost" style={{ fontSize: '0.78rem', padding: '0.25rem 0.5rem' }}><Plus size={11} />Add</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {((c as any).references || []).map((r: { name: string; role: string; status: string }) => (
+              {c.references.map((r) => (
                 <div key={r.name} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.7rem', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}>
                   <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <User size={13} style={{ color: '#9ca3af' }} />
@@ -302,7 +307,7 @@ export default function CandidateDetail() {
                   <span className={`badge ${r.status === 'obtained' ? 'badge-green' : 'badge-yellow'}`} style={{ fontSize: '0.7rem' }}>{r.status}</span>
                 </div>
               ))}
-              {(!(c as any).references || (c as any).references.length === 0) && (
+              {c.references.length === 0 && (
                 <p style={{ color: '#9ca3af', fontSize: '0.82rem', margin: 0 }}>No references added.</p>
               )}
             </div>

@@ -55,8 +55,8 @@ export default function Home() {
             ahead and secure the talent they need to deliver successful projects.
           </p>
           <div className="hero__cta reveal reveal-d3">
-            <Link to="/home/jobs" className="site-btn site-btn--gold site-btn--lg">View Vacancies <ArrowRight size={18} /></Link>
-            <Link to="/home/apply" className="site-btn site-btn--ghost site-btn--lg">Register Your CV</Link>
+            <Link to="/jobs" className="site-btn site-btn--gold site-btn--lg">View Vacancies <ArrowRight size={18} /></Link>
+            <Link to="/apply" className="site-btn site-btn--ghost site-btn--lg">Register Your CV</Link>
           </div>
         </div>
         <a href="#story" className="hero__scroll">
@@ -70,7 +70,7 @@ export default function Home() {
         <div className="statbar__inner">
           {stats.map(s => (
             <div key={s.label} className="statbar__item">
-              <div className="statbar__num" style={s.num.length > 6 ? { fontSize: '1.6rem' } : undefined}>{s.num}</div>
+              <div className="statbar__num" style={s.num.length > 6 ? { fontSize: '2rem' } : undefined}>{s.num}</div>
               <div className="statbar__label">{s.label}</div>
             </div>
           ))}
@@ -119,7 +119,7 @@ export default function Home() {
             {serviceTiles.map(tile => {
               const Icon = tile.icon
               return (
-                <Link key={tile.label} to="/home/jobs" className="svc-card">
+                <Link key={tile.label} to="/jobs" className="svc-card">
                   <div className="svc-card__bg" style={{ backgroundImage: `url(${tile.img})` }} />
                   <div className="svc-card__veil" />
                   <div className="svc-card__body">
@@ -146,8 +146,8 @@ export default function Home() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <Link to="/home/jobs" className="site-btn site-btn--gold site-btn--lg">Browse Vacancies <ArrowRight size={18} /></Link>
-            <Link to="/home/contact" className="site-btn site-btn--ghost site-btn--lg">Contact Us</Link>
+            <Link to="/jobs" className="site-btn site-btn--gold site-btn--lg">Browse Vacancies <ArrowRight size={18} /></Link>
+            <Link to="/contact" className="site-btn site-btn--ghost site-btn--lg">Contact Us</Link>
           </div>
         </div>
       </section>

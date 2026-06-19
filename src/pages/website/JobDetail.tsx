@@ -1,16 +1,20 @@
 import { useParams, Link } from 'react-router-dom'
 import { MapPin, Clock, Briefcase, ChevronLeft, Award, CheckCircle, Share2, Bookmark } from 'lucide-react'
-import { vacancies } from '../../data/mock'
+import { DataState } from '../../components/DataState'
+import { useCrmData } from '../../context/useCrmData'
 
 export default function JobDetail() {
   const { id } = useParams()
+  const { vacancies, loading, error } = useCrmData()
   const v = vacancies.find(v => v.id === Number(id))
+
+  if (loading || error) return <DataState loading={loading} error={error} />
 
   if (!v) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter, sans-serif' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontWeight: 700, fontSize: '1.25rem', color: '#000', marginBottom: '0.75rem' }}>Job not found</div>
-        <Link to="/home/jobs" style={{ color: '#b8942e', fontWeight: 600 }}>← Back to all jobs</Link>
+        <Link to="/jobs" style={{ color: '#b8942e', fontWeight: 600 }}>← Back to all jobs</Link>
       </div>
     </div>
   )
@@ -19,7 +23,7 @@ export default function JobDetail() {
     <div style={{ width: '100%', background: '#f5f6fa', fontFamily: 'Inter, sans-serif' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2.5rem 1.5rem' }}>
         {/* Breadcrumb */}
-        <Link to="/home/jobs" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+        <Link to="/jobs" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#6b7280', textDecoration: 'none', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
           <ChevronLeft size={14} />All jobs
         </Link>
 
@@ -57,32 +61,69 @@ export default function JobDetail() {
             {/* Job description */}
             <div style={{ background: '#fff', borderRadius: '12px', padding: '1.75rem', border: '1px solid #e5e7eb' }}>
               <h2 style={{ margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 700, color: '#000' }}>Job Description</h2>
-              <p style={{ margin: '0 0 1rem', fontSize: '1rem', color: '#374151', lineHeight: 1.7 }}>{v.description}</p>
-              <h3 style={{ margin: '1.5rem 0 0.75rem', fontSize: '1rem', fontWeight: 700, color: '#000' }}>Key Responsibilities</h3>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {[
-                  'Manage the on-site construction team and subcontractors',
-                  'Ensure health and safety compliance on site at all times',
-                  'Liaise with the client, design team and procurement team',
-                  'Monitor programme and report progress to senior management',
-                  'Coordinate site inspections, surveys and quality checks',
-                  'Maintain accurate site records, daily logs and RFIs',
-                ].map((item, i) => (
-                  <li key={i} style={{ fontSize: '1rem', color: '#374151', lineHeight: 1.5 }}>{item}</li>
-                ))}
-              </ul>
-              <h3 style={{ margin: '1.5rem 0 0.75rem', fontSize: '1rem', fontWeight: 700, color: '#000' }}>What We're Looking For</h3>
-              <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {[
-                  `5+ years experience in ${v.discipline} construction`,
-                  'Strong communication and leadership skills',
-                  'Proven track record on similar value projects',
-                  'Full right to work in the UK',
-                  'Local to the project or willing to travel',
-                ].map((item, i) => (
-                  <li key={i} style={{ fontSize: '1rem', color: '#374151', lineHeight: 1.5 }}>{item}</li>
-                ))}
-              </ul>
+              {(() => {
+                if (!v.description || v.description.trim() === '') {
+                  return (
+                    <>
+                      <h3 style={{ margin: '1.5rem 0 0.75rem', fontSize: '1rem', fontWeight: 700, color: '#000' }}>Key Responsibilities</h3>
+                      <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {[
+                          'Manage the on-site construction team and subcontractors',
+                          'Ensure health and safety compliance on site at all times',
+                          'Liaise with the client, design team and procurement team',
+                          'Monitor programme and report progress to senior management',
+                          'Coordinate site inspections, surveys and quality checks',
+                          'Maintain accurate site records, daily logs and RFIs',
+                        ].map((item, i) => (
+                          <li key={i} style={{ fontSize: '1rem', color: '#374151', lineHeight: 1.5 }}>{item}</li>
+                        ))}
+                      </ul>
+                      <h3 style={{ margin: '1.5rem 0 0.75rem', fontSize: '1rem', fontWeight: 700, color: '#000' }}>What We're Looking For</h3>
+                      <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {[
+                          `5+ years experience in ${v.discipline} construction`,
+                          'Strong communication and leadership skills',
+                          'Proven track record on similar value projects',
+                          'Full right to work in the UK',
+                          'Local to the project or willing to travel',
+                        ].map((item, i) => (
+                          <li key={i} style={{ fontSize: '1rem', color: '#374151', lineHeight: 1.5 }}>{item}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )
+                }
+
+                const blocks = v.description.split('\n').map(b => b.trim()).filter(b => b.length > 0)
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {blocks.map((block, idx) => {
+                      const isListItem = block.startsWith('-') || block.startsWith('*') || block.startsWith('•')
+                      if (isListItem) {
+                        const content = block.replace(/^[-*•]\s*/, '')
+                        return (
+                          <div key={idx} style={{ display: 'flex', gap: '0.5rem', paddingLeft: '0.5rem', fontSize: '1rem', color: '#374151', lineHeight: 1.7 }}>
+                            <span>•</span>
+                            <span>{content}</span>
+                          </div>
+                        )
+                      }
+                      if (block.endsWith(':') && block.length < 50) {
+                        return (
+                          <h3 key={idx} style={{ margin: '1rem 0 0.25rem', fontSize: '1rem', fontWeight: 700, color: '#000' }}>
+                            {block}
+                          </h3>
+                        )
+                      }
+                      return (
+                        <p key={idx} style={{ margin: 0, fontSize: '1rem', color: '#374151', lineHeight: 1.7 }}>
+                          {block}
+                        </p>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Required certs */}
@@ -107,7 +148,7 @@ export default function JobDetail() {
             <div style={{ background: '#fff', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
               <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#000', marginBottom: '0.25rem' }}>{v.salary}</div>
               <div style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '1.25rem' }}>{v.type} · {v.location}</div>
-              <Link to="/home/apply" style={{
+              <Link to="/apply" style={{
                 display: 'block', background: '#b8942e', color: '#fff', borderRadius: '8px',
                 padding: '0.875rem 1rem', textDecoration: 'none', textAlign: 'center',
                 fontWeight: 700, fontSize: '1rem', marginBottom: '0.75rem'
@@ -144,7 +185,7 @@ export default function JobDetail() {
             <div style={{ background: 'linear-gradient(135deg,#1e2535,#252f46)', borderRadius: '12px', padding: '1.5rem', border: '1px solid #b8942e30' }}>
               <h3 style={{ margin: '0 0 0.5rem', fontSize: '1rem', fontWeight: 700, color: '#fff' }}>Not quite right?</h3>
               <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 0.875rem', lineHeight: 1.5 }}>Register your CV and we'll contact you when a suitable role comes in.</p>
-              <Link to="/home/apply" style={{ display: 'block', background: '#b8942e', color: '#fff', borderRadius: '6px', padding: '0.5rem 1rem', textDecoration: 'none', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem' }}>Register CV</Link>
+              <Link to="/apply" style={{ display: 'block', background: '#b8942e', color: '#fff', borderRadius: '6px', padding: '0.5rem 1rem', textDecoration: 'none', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem' }}>Register CV</Link>
             </div>
           </div>
         </div>

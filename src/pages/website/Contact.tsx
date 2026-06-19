@@ -3,9 +3,9 @@ import { Phone, Mail, MapPin, CheckCircle, Send } from 'lucide-react'
 
 const offices = [
   {
-    name: 'London Office',
-    address: ['9th Floor, 30 Crown Place', 'City of London', 'EC2A 4EB'],
-    phone: '020 3897 8249',
+    name: 'Head Office',
+    address: ['71-75 Shelton Street', 'Covent Garden, London', 'WC2H 9JQ, United Kingdom'],
+    phone: '01234 332960',
     email: 'info@backfillrecruitment.co.uk',
   },
 ]

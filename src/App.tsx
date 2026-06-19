@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Candidates from './pages/Candidates'
@@ -11,6 +11,7 @@ import ClientDetail from './pages/ClientDetail'
 import Matching from './pages/Matching'
 import Cvs from './pages/Cvs'
 import MassEmail from './pages/MassEmail'
+import CallLogs from './pages/CallLogs'
 import AdminSettings from './pages/AdminSettings'
 import GeoMapping from './pages/GeoMapping'
 import ProjectDetail from './pages/ProjectDetail'
@@ -23,13 +24,24 @@ import SiteLayout from './pages/website/SiteLayout'
 import Contact from './pages/website/Contact'
 import WeeklyIntelligenceReports from './pages/website/WeeklyIntelligenceReports'
 import WhatMakesUsDifferent from './pages/website/WhatMakesUsDifferent'
+import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
+import ProtectedRoute from './components/ProtectedRoute'
+
+// Redirects a bare CRM path (e.g. /projects/145) to its /admin equivalent, preserving id + query.
+function AdminRedirect({ base }: { base: string }) {
+  const { pathname, search } = useLocation()
+  const rest = pathname.replace(new RegExp(`^/${base}`), '')
+  return <Navigate to={`/admin/${base}${rest}${search}`} replace />
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* Public website — shared header/footer via SiteLayout */}
-        <Route path="home" element={<SiteLayout />}>
+        <Route path="/" element={<SiteLayout />}>
           <Route index element={<Home />} />
           <Route path="jobs" element={<PublicJobs />} />
           <Route path="jobs/:id" element={<JobDetail />} />
@@ -39,9 +51,13 @@ export default function App() {
           <Route path="contact" element={<Contact />} />
         </Route>
 
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
+        {/* CRM Dashboard / Admin panel */}
+        <Route path="admin/login" element={<Login />} />
+        <Route path="admin/forgot-password" element={<ForgotPassword />} />
+        <Route path="admin/reset-password" element={<ResetPassword />} />
+
+        <Route path="admin" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route index element={<Dashboard />} />
           <Route path="candidates" element={<Candidates />} />
           <Route path="candidates/:id" element={<CandidateDetail />} />
           <Route path="vacancies" element={<Vacancies />} />
@@ -55,10 +71,20 @@ export default function App() {
           <Route path="cvs" element={<Cvs />} />
           <Route path="geo-mapping" element={<GeoMapping />} />
           <Route path="email" element={<MassEmail />} />
-          <Route path="activity" element={<Navigate to="/dashboard" replace />} />
-          <Route path="reports" element={<Navigate to="/dashboard" replace />} />
+          <Route path="call-logs" element={<CallLogs />} />
+          <Route path="activity" element={<Navigate to="/admin" replace />} />
+          <Route path="reports" element={<Navigate to="/admin" replace />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
+
+        {/* Legacy/bare CRM paths without the /admin prefix → redirect into the admin area, keeping the id */}
+        <Route path="/projects/*" element={<AdminRedirect base="projects" />} />
+        <Route path="/candidates/*" element={<AdminRedirect base="candidates" />} />
+        <Route path="/clients/*" element={<AdminRedirect base="clients" />} />
+        <Route path="/vacancies/*" element={<AdminRedirect base="vacancies" />} />
+
+        {/* Unknown route → public home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )

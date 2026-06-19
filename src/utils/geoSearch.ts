@@ -1,7 +1,5 @@
-import { postcodeCoords } from '../data/geo'
-import { projects, type Project } from '../data/mock'
 import { findRelatedClients } from './clientMatching'
-import type { ClientCompany } from '../data/clients'
+import type { ClientCompany, PostcodeCoordinateMap, Project } from '../types/crm'
 
 const EARTH_RADIUS_MILES = 3958.8
 
@@ -20,7 +18,7 @@ export function distanceMiles(a: { lat: number; lng: number }, b: { lat: number;
 }
 
 /** Look up coordinates for a project's postcode, if known. */
-export function projectCoords(project: Project): { lat: number; lng: number } | null {
+export function projectCoords(project: Project, postcodeCoords: PostcodeCoordinateMap): { lat: number; lng: number } | null {
   const pc = (project.postcode ?? '').trim().toUpperCase()
   if (!pc) return null
   return postcodeCoords[pc] ?? null
@@ -33,21 +31,27 @@ export interface ProjectWithDistance {
 }
 
 /** Find all projects with known coordinates within `radiusMiles` of the given centre point. */
-export function findProjectsNear(centre: { lat: number; lng: number }, radiusMiles: number): ProjectWithDistance[] {
+export function findProjectsNear(
+  centre: { lat: number; lng: number },
+  radiusMiles: number,
+  projects: Project[],
+  postcodeCoords: PostcodeCoordinateMap,
+  clients: ClientCompany[],
+): ProjectWithDistance[] {
   const results: ProjectWithDistance[] = []
   for (const project of projects) {
-    const coords = projectCoords(project)
+    const coords = projectCoords(project, postcodeCoords)
     if (!coords) continue
     const distance = distanceMiles(centre, coords)
     if (distance <= radiusMiles) {
-      results.push({ project, distance, relatedClients: findRelatedClients(project) })
+      results.push({ project, distance, relatedClients: findRelatedClients(project, clients) })
     }
   }
   return results.sort((a, b) => a.distance - b.distance)
 }
 
 /** Resolve a free-typed postcode/outcode to coordinates using the embedded project postcode lookup. */
-export function resolvePostcode(input: string): { lat: number; lng: number } | null {
+export function resolvePostcode(input: string, postcodeCoords: PostcodeCoordinateMap): { lat: number; lng: number } | null {
   const normalized = input.trim().toUpperCase().replace(/\s+/g, ' ')
   if (!normalized) return null
 
